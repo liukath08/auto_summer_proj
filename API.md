@@ -85,8 +85,8 @@ Represents a program to be run on a device.
 + **field_titles:** Column names for saving data. <br>
 + **data:** Data collected during the program. <br>
 + **status:** Status of the program. <br>
-+ **fields:** Data fields teh program returns. <br>
-+ **technqiues:** List of techniques the program uses.
++ **fields:** Data fields the program returns. <br>
++ **techniques:** List of techniques the program uses.
 
 ### Program Runner
 Represents a program to be run on a device channel.
@@ -347,8 +347,8 @@ Loads the technique with parameter on the given device channel.
 + **create_parameter( name, value, index, kind = None ):** 
 Creates an EccParam struct.
 
-+ **update_paramters( idn, ch, technique, params, tech_index = 0 ):** 
-Updates the paramters of a technique on teh given device channel.
++ **update_parameters( idn, ch, technique, params, tech_index = 0 ):** 
+Updates the parameters of a technique on the given device channel.
 
 + **cast_parameters( parameters, types ):** Cast parameters to given types.
 
