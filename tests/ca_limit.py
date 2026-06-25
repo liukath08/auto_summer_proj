@@ -5,7 +5,7 @@ import easy_biologic.base_programs as ebp
 
 logging.basicConfig( level = logging.DEBUG )
 
-channels = [ 0, 1, 2, 3 ,7 ]
+channels = [ 0 ]
 by_channel = False
 params = { 
 	'voltages':  [ 0, 1 ]* 2,
