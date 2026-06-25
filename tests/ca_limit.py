@@ -17,8 +17,13 @@ if not by_channel:
 	# file if saving individually
 	save_path += '.csv'
 
-bl = ebl.BiologicDevice( 'USB0' )
-prg = ebp.CALimit( bl, channels, params )
+bl = ebl.BiologicDevice("USB0")
+
+prg = ebp.CALimit(
+    bl,
+    params,
+    channels=channels,
+)
 
 prg.run()
-prg.save_data( save_path, by_channel = by_channel )
+prg.save_data(save_path, by_channel=by_channel)
