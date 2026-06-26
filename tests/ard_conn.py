@@ -1,61 +1,29 @@
 import serial
+
 import time
 
-# CHANGE THIS to Arduino port:
-PORT = "COMX"
+PORT = "/dev/cu.usbmodemXXXX"   # Replace with your Arduino port
 
-baud_rate = 9600
+BAUD = 115200
 
-# Open serial connection
-arduino = serial.Serial(PORT, baud_rate, timeout=1)
+ser = serial.Serial(PORT, BAUD, timeout=1)
 
-# Wait for Arduino to reset
+time.sleep(2)   # Give Arduino time to reset
+
+print(ser.readline().decode().strip())
+
+ser.write(b"PING\n")
+
+print(ser.readline().decode().strip())
+
+ser.write(b"ON\n")
+
+print(ser.readline().decode().strip())
+
 time.sleep(2)
 
-print("Connected to Arduino")
+ser.write(b"OFF\n")
 
-# Send test messages
-for i in range(5):
-    message = f"Hello Arduino {i}\n"
-    arduino.write(message.encode())   # send bytes
-    print("Sent:", message.strip())
+print(ser.readline().decode().strip())
 
-    # Read response
-    response = arduino.readline().decode().strip()
-    print("Received:", response)
-
-    time.sleep(1)
-
-arduino.close()
-
-import serial
-import time
-
-# CHANGE THIS to your Arduino port:
-# Windows: "COM3", "COM4", etc.
-# Mac/Linux: "/dev/tty.usbmodemXXXX" or "/dev/ttyACM0"
-PORT = "COM3"
-
-baud_rate = 9600
-
-# Open serial connection
-arduino = serial.Serial(PORT, baud_rate, timeout=1)
-
-# Wait for Arduino to reset
-time.sleep(2)
-
-print("Connected to Arduino")
-
-# Send test messages
-for i in range(5):
-    message = f"Hello Arduino {i}\n"
-arduino.write(message.encode()) # send bytes
-print("Sent:", message.strip())
-
-# Read response
-response = arduino.readline().decode().strip()
-print("Received:", response)
-
-time.sleep(1)
-
-arduino.close()
+ser.close()
