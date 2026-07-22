@@ -1,93 +1,25 @@
-import csv
-from pathlib import Path
+import logging
 
 import easy_biologic as ebl
 import easy_biologic.base_programs as ebp
 
+logging.basicConfig( level = logging.DEBUG )
 
-CHANNELS = [0]
-OUTPUT_FILE = Path("data/ocv-ca-ca-ocv.csv")
+channels = [ 0, 1, 2, 3 ,7 ]
+by_channel = False
+params = { 
+	'voltages':  [ 0, 1,2,-2,1,0 ],
+	'durations': [ 2 ],
+	'cycles': 4,
+}
 
-device = ebl.BiologicDevice("USB0")
+save_path = 'data/ca-limit'
+if not by_channel:
+	# file if saving individually
+	save_path += '.csv'
 
-programs = [
-    (
-        "OCV 1",
-        ebp.OCV(
-            device,
-            {"time": 5, "time_interval": 1},
-            channels=CHANNELS,
-        ),
-    ),
-    (
-        "CA 1",
-        ebp.CA(
-            device,
-            {"voltages": [1], "durations": [10], "time_interval": 1},
-            channels=CHANNELS,
-        ),
-    ),
-    (
-        "CA 2",
-        ebp.CA(
-            device,
-            {"voltages": [2], "durations": [10], "time_interval": 1},
-            channels=CHANNELS,
-        ),
-    ),
-    (
-        "CA 3",
-        ebp.CA(
-            device,
-            {"voltages": [-2], "durations": [10], "time_interval": 1},
-            channels=CHANNELS,
-        ),
-    ),
-    (
-                    "CA 4",
-                    ebp.CA(
-                        device,
-                        {"voltages": [1], "durations": [10], "time_interval": 1},
-                        channels=CHANNELS,
-                    ),
-                ),
-    (
-        "OCV 2",
-        ebp.OCV(
-            device,
-            {"time": 5, "time_interval": 1},
-            channels=CHANNELS,
-        ),
-    ),
-]
+bl = ebl.BiologicDevice( 'USB0' )
+prg = ebp.CALimit( bl, params, channels=channels )
 
-# Run the techniques in order and retain each program's results until all four
-# have completed.
-for _, program in programs:
-    program.run()
-
-# OCV and CA expose different data columns, so normalize both into one table
-# instead of appending incompatible CSV layouts.
-OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-with OUTPUT_FILE.open("w", newline="") as output:
-    writer = csv.writer(output)
-    writer.writerow(
-        ["technique", "channel", "time", "voltage", "current", "power", "cycle"]
-    )
-
-    for technique, program in programs:
-        for channel, channel_data in program.data.items():
-            for datum in channel_data:
-                writer.writerow(
-                    [
-                        technique,
-                        channel,
-                        datum.time,
-                        datum.voltage,
-                        getattr(datum, "current", ""),
-                        getattr(datum, "power", ""),
-                        getattr(datum, "cycle", ""),
-                    ]
-                )
-
-print(f"Saved all technique data to {OUTPUT_FILE}")
+prg.run()
+prg.save_data( save_path, by_channel = by_channel )
