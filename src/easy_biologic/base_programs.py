@@ -711,6 +711,140 @@ class CALimit(BiologicProgram):
             )
 
 
+class CPLimit(BiologicProgram):
+    """Runs a chrono-potentiometry technique with limit conditions."""
+
+    def __init__(self, device, params, **kwargs):
+        """
+        :param device: BiologicDevice.
+        :param params: Program parameters.
+            Params are
+            currents: List of currents in Amps.
+            durations: List of times in seconds.
+            vs_initial: If step is vs. initial or previous.
+                [Default: False]
+            time_interval: Maximum time interval between points in seconds.
+                [Default: 1]
+            voltage_interval: Maximum voltage change between points in Volts.
+                [Default: 0.001]
+            limits: List of LimitConfig tuples defining limits for the
+                technique. LimitConfig objects should be constructed with
+                configure_limit. Up to 3 limits can be supplied. If no limits
+                are supplied, use the standard CP technique instead.
+                [Default: []]
+            exit_condition: How to exit the technique when a limit is
+                violated. Use ec_lib.ExitCondition.
+                [Default: ExitCondition.STOP]
+        :param **kwargs: Parameters passed to BiologicProgram.
+        """
+        defaults = {
+            "vs_initial": False,
+            "time_interval": 1.0,
+            "voltage_interval": 1e-3,
+            "limits": [],
+            "exit_condition": ecl.ExitCondition.STOP,
+        }
+
+        channels = kwargs["channels"] if ("channels" in kwargs) else None
+        params = set_defaults(params, defaults, channels)
+        super().__init__(device, params, **kwargs)
+
+        # CPLimit requires a fixed current range based on the applied steps.
+        for ch_params in self.params.values():
+            i_max = max(abs(current) for current in ch_params["currents"])
+            set_current_range(ch_params, i_max)
+
+        self._techniques = ["cplimit"]
+        self._parameter_types = tfs.CPLimit
+        self._data_fields = (
+            dp.SP300_Fields.CPLIMIT
+            if ecl.is_in_SP300_family(self.device.kind)
+            else dp.VMP3_Fields.CPLIMIT
+        )
+
+        self.field_titles = [
+            "Time [s]",
+            "Voltage [V]",
+            "Current [A]",
+            "Power [W]",
+            "Cycle",
+        ]
+
+        self._fields = namedtuple(
+            "CPLimit_Datum", ["time", "voltage", "current", "power", "cycle"]
+        )
+
+        self._field_values = lambda datum, segment: (
+            dp.calculate_time(datum.t_high, datum.t_low, segment.info, segment.values),
+            datum.voltage,
+            datum.current,
+            datum.voltage * datum.current,
+            datum.cycle,
+        )
+
+    def run(self, retrieve_data=True):
+        """
+        :param retrieve_data: Automatically retrieve and disconnect from device.
+            [Default: True]
+        """
+        params = {}
+        for ch, ch_params in self.params.items():
+            steps = len(ch_params["currents"])
+            params[ch] = {
+                "Current_step": ch_params["currents"],
+                "vs_initial": [ch_params["vs_initial"]] * steps,
+                "Duration_step": ch_params["durations"],
+                "Step_number": steps - 1,
+                "Record_every_dT": ch_params["time_interval"],
+                "Record_every_dE": ch_params["voltage_interval"],
+                "Exit_Cond": [ch_params["exit_condition"].value] * steps,
+                "N_Cycles": 0,
+            }
+
+            for i in range(3):
+                try:
+                    config = ch_params["limits"][i]
+                    params[ch][f"Test{i + 1}_Config"] = [config.config_int] * steps
+                    params[ch][f"Test{i + 1}_Value"] = [config.value] * steps
+                except IndexError:
+                    params[ch][f"Test{i + 1}_Config"] = 0
+                    params[ch][f"Test{i + 1}_Value"] = 0
+
+            params[ch].update(map_hardware_params(ch_params, by_channel=False))
+
+        return self._run("cplimit", params, retrieve_data=retrieve_data)
+
+    def update_currents(self, currents, durations=None, vs_initial=None):
+        """Update current and duration parameters."""
+        if not isinstance(currents, dict):
+            currents = {ch: currents for ch in self.channels}
+
+        if (durations is not None) and (not isinstance(durations, dict)):
+            durations = {ch: durations for ch in self.channels}
+
+        if (vs_initial is not None) and (not isinstance(vs_initial, dict)):
+            vs_initial = {ch: vs_initial for ch in self.channels}
+
+        for ch, ch_currents in currents.items():
+            if not isinstance(ch_currents, list):
+                ch_currents = [ch_currents]
+
+            params = {
+                "Current_step": ch_currents,
+                "Step_number": len(ch_currents) - 1,
+            }
+
+            if (durations is not None) and durations[ch]:
+                params["Duration_step"] = durations[ch]
+
+            if (vs_initial is not None) and vs_initial[ch]:
+                params["vs_initial"] = vs_initial[ch]
+
+            self.device.update_parameters(
+                ch, "cplimit", params, types=self._parameter_types
+            )
+
+
 class PEIS(BiologicProgram):
     """Runs Potentio Electrochemical Impedance Spectroscopy technique."""
 

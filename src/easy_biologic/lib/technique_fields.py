@@ -43,7 +43,7 @@ class CALIMIT(Enum):
     Voltage_step = float
     vs_initial = bool
     Duration_step = float
-    Step_nuber = int
+    Step_number = int
     Record_every_dT = float
     Record_every_dI = float
     Test1_Config = int
@@ -56,11 +56,11 @@ class CALIMIT(Enum):
     N_Cycles = int
 
 
-class CPLIMIT(Enum):
+class CPLimit(Enum):
     Current_step = float
     vs_initial = bool
     Duration_step = float
-    Step_nuber = int
+    Step_number = int
     Record_every_dT = float
     Record_every_dE = float
     Test1_Config = int
@@ -71,6 +71,11 @@ class CPLIMIT(Enum):
     Test3_Value = float
     Exit_Cond = int
     N_Cycles = int
+
+
+# Preserve the existing all-caps technique-field naming convention for callers
+# that already reference ``technique_fields.CPLIMIT``.
+CPLIMIT = CPLimit
 
 
 class PEIS(Enum):

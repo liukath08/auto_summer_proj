@@ -199,6 +199,7 @@ class TechniqueId(Enum):
     `PEIS`: Potentio electrochemical impedance
     `GEIS`: Galvano electrochemical impedance
     `CALIMIT`: Chrono-amperometry with limits
+    `CPLIMIT`: Chrono-potentiometry with limits
     """
 
     NONE = 0
@@ -208,6 +209,7 @@ class TechniqueId(Enum):
     CV = 103
     PEIS = 104
     GEIS = 107
+    CPLIMIT = 155
     CALIMIT = 157
 
 
