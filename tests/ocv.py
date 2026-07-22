@@ -16,7 +16,7 @@ if not by_channel:
 	# file if saving individually
 	save_path += '.csv'
 
-bl = ebl.BiologicDevice( '192.168.1.2' )
+bl = ebl.BiologicDevice( 'USB0' )
 # bl.connect()
 prg = ebp.OCV( bl, params, channels )
 
