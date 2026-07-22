@@ -18,7 +18,7 @@ if not by_channel:
 
 bl = ebl.BiologicDevice( 'USB0' )
 # bl.connect()
-prg = ebp.OCV( bl, params, channels )
+prg = ebp.OCV( bl, params, channels = channels )
 
 prg.run()
 prg.save_data( save_path, by_channel = by_channel )

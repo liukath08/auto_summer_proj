@@ -9,7 +9,8 @@ channels = [ 0, 1, 2, 3 ,7 ]
 by_channel = False
 params = { 
 	'voltages':  [ 0, 1 ]* 2,
-	'durations': [ 2 ]* 4
+	'durations': [ 2 ]* 4,
+	'cycles': 2,
 }
 
 save_path = 'data/ca-limit'

@@ -649,7 +649,7 @@ class CALimit(BiologicProgram):
                 "Record_every_dT": ch_params["time_interval"],
                 "Record_every_dI": ch_params["current_interval"],
                 "Exit_Cond": [ch_params["exit_condition"].value] * steps,
-                "N_Cycles": 0,
+                "N_Cycles": ch_params["cycles"] if "cycles" in ch_params else 0,
             }
 
             # Set limit (test) configuration
