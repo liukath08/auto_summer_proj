@@ -27,6 +27,7 @@ class CA(Enum):
     Record_every_dT = float
     Record_every_dI = float
     N_Cycles = int
+    
 
 
 class CP(Enum):
@@ -54,7 +55,7 @@ class CALIMIT(Enum):
     Test3_Value = float
     Exit_Cond = int
     N_Cycles = int
-
+    
 
 class CPLimit(Enum):
     Current_step = float
@@ -71,6 +72,7 @@ class CPLimit(Enum):
     Test3_Value = float
     Exit_Cond = int
     N_Cycles = int
+   
 
 
 # Preserve the existing all-caps technique-field naming convention for callers
