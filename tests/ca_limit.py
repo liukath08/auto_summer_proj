@@ -5,12 +5,14 @@ import easy_biologic.base_programs as ebp
 
 logging.basicConfig( level = logging.DEBUG )
 
-channels = [ 0, 1, 2, 3 ,7 ]
+channels = [ 0 ]
 by_channel = False
 params = { 
 	'voltages':  [ 0, 1 ]* 2,
 	'durations': [ 2 ]* 4,
 	'cycles': 2,
+    
+
 }
 
 save_path = 'data/ca-limit'
