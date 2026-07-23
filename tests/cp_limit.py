@@ -19,19 +19,19 @@ lower_voltage_limit = ebp.configure_limit(
     ecl.LimitVariable.E,
     ecl.LimitComparison.LT,
     ecl.LimitLogic.OR,
-    -1.0,
+    -2.0,
 )
 
 upper_voltage_limit = ebp.configure_limit(
     ecl.LimitVariable.E,
     ecl.LimitComparison.GT,
     ecl.LimitLogic.OR,
-    1.0,
+    2.0,
 )
 
 params = {
-    "currents": [0.001],
-    "durations": [10],
+    "currents": [-0.0000000004],
+    "durations": [120],
     "limits": [lower_voltage_limit, upper_voltage_limit],
     "exit_condition": ecl.ExitCondition.STOP
 }

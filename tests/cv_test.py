@@ -40,17 +40,17 @@ FIG_PATH = DATA_DIR / "dummy_cell_CV_V_vs_I.png"
 # at 50 mV/s
 params_cv = {
     "start": 0.0,
-    "end": 0.2,
-    "E2": -0.2,
+    "end": -2.0,
+    "E2": 1.4,
     "Ef": 0.0,
     "rate": 0.05,       # V/s = 50 mV/s
     "step": 0.001,      # V = 1 mV
     "N_Cycles": 1,
     "begin_measuring_I": 0.0,
     "End_measuring_I": 1.0,
-    "average": False,
-    "filter": 3,
-    "current_range": ecl.IRange.u100,
+    "average": True,
+    "filter": ecl.Filter.h5,
+    "current_range": ecl.IRange.n100,
 
 }
 
@@ -102,9 +102,9 @@ def plot_v_vs_i():
     current = df[current_col]
 
     plt.figure(figsize=(6, 5))
-    plt.plot(current, voltage)
-    plt.xlabel("Current, I (A)")
-    plt.ylabel("Voltage, V (V)")
+    plt.plot(voltage, current)
+    plt.ylabel("Current, I (A)")
+    plt.xlabel("Voltage, V (V)")
     plt.title("Dummy cell CV: V vs I")
     plt.tight_layout()
     plt.savefig(FIG_PATH, dpi=300)
