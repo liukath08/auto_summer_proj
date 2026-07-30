@@ -33,7 +33,6 @@ upper_current_limit = ebp.configure_limit(
     
 )
 
-
 params = { 
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
@@ -105,59 +104,71 @@ prg = ebp.CALimit( bl, params, channels=channels )
 prg.run()
 prg.save_data( save_path, by_channel = by_channel )
 
-#plotting
-#def plot_current_vs_time():
- #   print("Reading saved csv...")
-#
-   # Skip the extra first line written by easy-biologic
-#    df = pd.read_csv(save_path, skiprows=1)
-#
- #   time_col = "Time [s]"
-  #  current_col = "Current [A]"
+"""""
+def plot_current_vs_time():
+    print("Reading saved CSV...")
 
-#    if time_col not in df.columns:
-#        raise ValueError(f"Could not find time column: {time_col}")
-
-#    if current_col not in df.columns:
-#        raise ValueError(f"Could not find current column: {current_col}")
-
-#    time = df[time_col]
-#    current = df[current_col]
-
-#    plt.figure(figsize=(6, 5))
- #   plt.plot(time, current)
-
- #   plt.xlabel("Time (s)")
-#    plt.ylabel("Current (A)")
-#    plt.title("CALimit: Current vs Time")
-
- #   plt.tight_layout()
- #   plt.savefig("data/tests_current_vs_time.png", dpi=300)
- #   plt.close()
-
- #   print("Saved current-vs-time figure.")
-
-#plot_current_vs_time()
-
-
-def plot_cplimit_by_cycle():
-    print("Reading saved CPLimit CSV...")
-
+    # Skip the extra first line written by easy-biologic.
     df = pd.read_csv(save_path, skiprows=1)
 
     time_col = "Time [s]"
     current_col = "Current [A]"
-    voltage_col = "Voltage [V]"
+
+    if time_col not in df.columns:
+        raise ValueError(f"Could not find time column: {time_col}")
+
+    if current_col not in df.columns:
+        raise ValueError(f"Could not find current column: {current_col}")
+
+    time = df[time_col]
+    current = df[current_col]
+
+    plt.figure(figsize=(6, 5))
+    plt.plot(time, current)
+
+    plt.xlabel("Time (s)")
+    plt.ylabel("Current (A)")
+    plt.title("CALimit: Current vs Time")
+
+    plt.tight_layout()
+    plt.savefig("data/tests_current_vs_time.png", dpi=300)
+    plt.close()
+
+    print("Saved current-vs-time figure.")
+    
+
+plot_current_vs_time()
+"""
+
+def plot_ca_limit_by_cycle():
+    print("Reading saved CALimit CSV...")
+
+    # Skip the extra first line written by easy-biologic.
+    df = pd.read_csv(save_path, skiprows=1)
+
+    time_col = "Time [s]"
+    current_col = "Current [A]"
     cycle_col = "Cycle"
 
     required_columns = [
         time_col,
         current_col,
-        voltage_col,
         cycle_col,
     ]
 
-    # Convert the required columns to numbers and remove invalid rows
+    missing_columns = [
+        column
+        for column in required_columns
+        if column not in df.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(
+            f"Missing required CSV columns: {missing_columns}"
+        )
+
+    # Convert values to numbers, remove invalid rows, and sort
+    # measurements into acquisition order.
     plot_data = (
         df[required_columns]
         .apply(pd.to_numeric, errors="coerce")
@@ -165,96 +176,63 @@ def plot_cplimit_by_cycle():
         .sort_values([cycle_col, time_col])
     )
 
-    # Cycle number mapped to graph color
-    cycle_colors = {
-        0: "red",
-        1: "orange",
-        2: "gold",
-        3: "green",
-        4: "blue",
-        5: "purple",
-    }
+    if plot_data.empty:
+        raise ValueError("The CSV contains no valid data to plot.")
 
-    figure, axes = plt.subplots(
-        3,
-        1,
-        figsize=(7, 13),
+    cycle_groups = list(
+        plot_data.groupby(cycle_col, sort=True)
+    )
+
+    number_of_cycles = len(cycle_groups)
+    color_map = plt.get_cmap("turbo")
+
+    figure, axis = plt.subplots(
+        figsize=(8, 6),
         constrained_layout=True,
     )
 
-    # Plot each cycle separately so it receives its own color
-    for cycle, cycle_data in plot_data.groupby(cycle_col):
-        cycle = int(cycle)
+    for color_index, (cycle, cycle_data) in enumerate(
+        cycle_groups
+    ):
+        cycle_number = int(cycle)
 
-        # Cycles not listed above default to black
-        color = cycle_colors.get(cycle, "black")
-        label = f"Cycle {cycle}"
+        # Select a different color for every cycle.
+        color_position = (
+            color_index / max(number_of_cycles - 1, 1)
+        )
+        color = color_map(color_position)
 
         time = cycle_data[time_col]
         current = cycle_data[current_col]
-        voltage = cycle_data[voltage_col]
 
-        # Assign consecutive measurements to groups of three
-        averaged = cycle_data.copy()
-        averaged["group_number"] = range(len(averaged))
-        averaged["group_number"] = averaged["group_number"] // 3
-
-        # Calculate mean current and voltage for each group
-        averaged = (
-            averaged
-            .groupby("group_number", as_index=False)
-            .agg({
-                current_col: "mean",
-                voltage_col: "mean",
-            })
-        )
-
-        # Graph 1: averaged voltage versus current
-        axes[0].plot(
-            averaged[current_col],
-            averaged[voltage_col],
-            color=color,
-            marker="o",
-            label=label,
-        )
-
-        # Graph 2: current versus time
-        axes[1].plot(
+        axis.plot(
             time,
             current,
             color=color,
-            label=label,
+            linewidth=1.5,
+            label=f"Cycle {cycle_number}",
         )
 
-        # Graph 3: voltage versus time
-        axes[2].plot(
-            time,
-            voltage,
-            color=color,
-            label=label,
-        )
+    axis.set_xlabel("Time (s)")
+    axis.set_ylabel("Current (A)")
+    axis.set_title("CALimit: Current vs Time by Cycle")
 
-    axes[0].set_xlabel("Current (A)")
-    axes[0].set_ylabel("Voltage (V)")
-    axes[0].set_title("CPLimit: Voltage vs Current")
+    axis.grid(True, alpha=0.3)
+    axis.legend(title="Cycles")
 
-    axes[1].set_xlabel("Time (s)")
-    axes[1].set_ylabel("Current (A)")
-    axes[1].set_title("CPLimit: Current vs Time")
+    output_path = Path(
+        "data/CALimit_current_by_cycle.png"
+    )
 
-    axes[2].set_xlabel("Time (s)")
-    axes[2].set_ylabel("Voltage (V)")
-    axes[2].set_title("CPLimit: Voltage vs Time")
-
-    for axis in axes:
-        axis.grid(True, alpha=0.3)
-        axis.legend()
-
-    output_path = "data/CPLimit_graphs_by_cycle.png"
-    plt.savefig(output_path, dpi=300)
+    figure.savefig(
+        output_path,
+        dpi=300,
+        bbox_inches="tight",
+    )
     plt.close(figure)
 
-    print(f"Saved graphs to: {output_path}")
+    print(f"Saved graph to: {output_path}")
+
+plot_ca_limit_by_cycle()
 
 
-plot_cplimit_by_cycle()
