@@ -8,50 +8,77 @@ import easy_biologic as ebl
 import easy_biologic.base_programs as ebp
 from easy_biologic.lib import ec_lib as ecl
 
-
-# -------------------------
-# Logging
-# -------------------------
 logging.basicConfig(level=logging.INFO)
 
-
-# -------------------------
-# BioLogic settings
-# -------------------------
 BIOLOGIC_ADDRESS = "USB0"
 CHANNEL = 0
 
-
-# -------------------------
-# File paths
-# -------------------------
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
 
 CSV_PATH = DATA_DIR / "dummy_cell_CV.csv"
 FIG_PATH = DATA_DIR / "dummy_cell_CV_V_vs_I.png"
 
-
-# -------------------------
-# CV parameters for dummy cell
-# -------------------------
-# This runs:
-# 0.0 V -> +0.2 V -> -0.2 V -> 0.0 V
-# at 50 mV/s
 params_cv = {
-    "start": 0.0,
-    "end": -2.0,
-    "E2": 1.4,
-    "Ef": 0.0,
-    "rate": 0.05,       # V/s = 50 mV/s
-    "step": 0.001,      # V = 1 mV
-    "N_Cycles": 1,
-    "begin_measuring_I": 0.0,
-    "End_measuring_I": 1.0,
-    "average": True,
-    "filter": ecl.Filter.h5,
-    "current_range": ecl.IRange.n100,
+    #Current range  
+	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
+    # (p100, n1, n10,n100, u1, u10, u,100, m1, m10, m100, a1, KEEP, BOOSTER, AUTO)
+	"current_range": ecl.IRange.m10, 
+    
+	#Voltage range 
+    #(v2_5, +-2.5V),(v5, +-5V),(v10, +-10V), (AUTO, automatic voltage range)
+	"voltage_range": ecl.ERange.AUTO, 
 
+	#Hardware filtering
+    #(k50: 50kHz), (k1: 1kHz), (h5: 5Hz), (OFF)
+	"filter": ecl.Filter.h5, 
+
+	#Average, 
+	# True = average, False = no average)
+	"average": True, 
+
+	#Hardware bandwidth 
+	#(BW1-9), 1= slow, 9=fast
+	"bandwidth": ecl.Bandwidth.BW5, 
+
+	#Electrode Connection
+    #(STND, CETOGRND, WETOGRND, HV)
+    "electrode_connection": ecl.ElectrodeConnection.STND,
+
+    #Channel Mode
+    #(GROUNDED, FLOATING)
+    "channel_mode": ecl.ChannelMode.GROUNDED,
+
+    #If step is vs initial or previous
+    #Array of 20 boolean, defualt false
+	'vs_initial': [], 
+
+    #Start voltage
+    "start": 0.0, 
+
+    #End voltage
+    "end": -2.0, 
+
+    #Boundary voltage in backwards scan
+    "E2": 1.4, 
+
+    #End voltage in the final cycle scan
+    "Ef": 0.0, 
+    
+    # Scan rate in V/s. 
+    "rate": 0.05,  
+
+    # Voltage step. dEN/1000     
+    "step": 0.001,      
+
+    # Cycles, starts from 0
+    "N_Cycles": 1, 
+
+    #Begin step accumulation.“1” means 100% of step    
+    "begin_measuring_I": 0.0, 
+
+    # End step accumulation. “1” means 100% of step
+    "End_measuring_I": 1.0, 
 }
 
 
@@ -105,7 +132,7 @@ def plot_v_vs_i():
     plt.plot(voltage, current)
     plt.ylabel("Current, I (A)")
     plt.xlabel("Voltage, V (V)")
-    plt.title("Dummy cell CV: V vs I")
+    plt.title("CV")
     plt.tight_layout()
     plt.savefig(FIG_PATH, dpi=300)
     plt.close()

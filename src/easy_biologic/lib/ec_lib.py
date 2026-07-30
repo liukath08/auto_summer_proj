@@ -177,11 +177,17 @@ class Filter(Enum):
 
 class ElectrodeConnection(Enum):
     """
-    `GROUNDED` connects CE to ground.
+    `CETOGRND` connects CE to ground.
+    `WETOGRND` connects WE to ground.
+    'HV' high voltage connection (0-50v measure)
     """
 
-    STANDARD = 0
-    GROUNDED = 1
+    STND = 0
+    CETOGRND = 1
+    WETOGRND = 2
+    HV = 3
+
+
 
 
 class ChannelMode(Enum):
