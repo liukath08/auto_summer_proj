@@ -75,7 +75,7 @@ params_cv = {
     "N_Cycles": 1, 
 
     #Begin step accumulation.“1” means 100% of step    
-    "begin_measuring_I": 0.0, 
+    "Begin_measuring_I": 0.0, 
 
     # End step accumulation. “1” means 100% of step
     "End_measuring_I": 1.0, 
@@ -93,7 +93,7 @@ def run_cv():
     )
 
     print("Running CV on dummy cell...")
-    cv.run("data")
+    cv.run()
 
     print(f"Saving CV data to: {CSV_PATH}")
     cv.save_data(CSV_PATH)
