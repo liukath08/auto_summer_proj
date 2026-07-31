@@ -206,6 +206,7 @@ class SP300_Fields:
         FI("current", SINGLE),
         FI("voltage", SINGLE),
         FI("cycle", INT32),
+    
     ]
 
     PEIS = (

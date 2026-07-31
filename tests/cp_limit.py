@@ -33,7 +33,7 @@ params = {
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
     # (p100, n1, n10,n100, u1, u10, u,100, m1, m10, m100, a1, KEEP, BOOSTER, AUTO)
-	"current_range": ecl.IRange.m10, 
+	"current_range": ecl.IRange.AUTO, 
     
 	#Voltage range 
     #(v2_5, +-2.5V),(v5, +-5V),(v10, +-10V), (AUTO, automatic voltage range)
@@ -45,7 +45,7 @@ params = {
 
 	#Average, 
 	# True = average, False = no average)
-	"average": True, 
+	"average": False, 
 
     #Hardware bandwidth 
 	#(BW1-9), 1= slow, 9=fast
@@ -53,7 +53,7 @@ params = {
 
     #Electrode Connection
     #(STND, CETOGRND, WETOGRND, HV)
-    "electrode_connection": ecl.ElectrodeConnection.STND,
+    "electrode_connection": ecl.ElectrodeConnection.CETOGRND,
 
     #Channel Mode
     #(GROUNDED, FLOATING)
@@ -65,11 +65,11 @@ params = {
 
     #Apply I (A)
      #Array of up to 20 currents, in Amps
-    "currents": [-0.0000000004],#List of currents in Amps
+    "currents": [-0.000000016,0.0000000016],#List of currents in Amps
     
 	#Duration of applied currents (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 2,2,2,2,2,2 ], 
+    'durations': [ 150, 150], 
 
     #Maximum time interval between recordedpoints.
 	'time_interval': 1.0, 
@@ -87,10 +87,10 @@ params = {
     "exit_condition": ecl.ExitCondition.STOP, 
      
     # Cycles, starts from 0
-    'cycles': 4, 
+    'cycles': 0 
 }
 
-save_path = 'data/cp-limit'
+save_path = 'data/cp-limit-noaverage'
 if not by_channel:
 	# file if saving individually
 	save_path += '.csv'
@@ -130,7 +130,7 @@ def plot_voltage_vs_time():
     plt.title("CPLimit: Voltage vs Time")
 
     plt.tight_layout()
-    plt.savefig(  "data/CPLimit_voltage_vs_time.png", dpi=300)
+    plt.savefig(  "data/CPLimit_voltage_vs_time_noaverage.png", dpi=300)
     plt.close()
 
     print("Saved voltage-vs-time figure.")
@@ -233,3 +233,4 @@ def plot_cp_limit_by_cycle():
     print(f"Saved graph to: {output_path}")
 
 plot_cp_limit_by_cycle()
+
