@@ -16,18 +16,18 @@ CHANNEL = 0
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
 
-CSV_PATH = DATA_DIR / "dummy_cell_CV.csv"
-FIG_PATH = DATA_DIR / "dummy_cell_CV.png"
+CSV_PATH = DATA_DIR / "080326_1319_CV_-1V-1V_100mVs-1_1C06_CEtoGND.csv"
+FIG_PATH = DATA_DIR / "080326_1319_CV_-1V-1V_100mVs-1_1C06_CEtoGND.png"
 
 params_cv = {
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
     # (p100, n1, n10,n100, u1, u10, u,100, m1, m10, m100, a1, KEEP, BOOSTER, AUTO)
-	"current_range": ecl.IRange.m10, 
+	"current_range": ecl.IRange.AUTO, 
     
 	#Voltage range 
     #(v2_5, +-2.5V),(v5, +-5V),(v10, +-10V), (AUTO, automatic voltage range)
-	"voltage_range": ecl.ERange.AUTO, 
+	"voltage_range": ecl.ERange.v2_5, 
 
 	#Hardware filtering
     #(k50: 50kHz), (k1: 1kHz), (h5: 5Hz), (OFF)
@@ -35,7 +35,7 @@ params_cv = {
 
 	#Average, 
 	# True = average, False = no average)
-	"average": True, 
+	"average": False, 
 
 	#Hardware bandwidth 
 	#(BW1-9), 1= slow, 9=fast
@@ -43,7 +43,7 @@ params_cv = {
 
 	#Electrode Connection
     #(STND, CETOGRND, WETOGRND, HV)
-    "electrode_connection": ecl.ElectrodeConnection.STND,
+    "electrode_connection": ecl.ElectrodeConnection.CETOGRND,
 
     #Channel Mode
     #(GROUNDED, FLOATING)
@@ -51,34 +51,34 @@ params_cv = {
 
     #If step is vs initial or previous
     #Array of 20 boolean, defualt false
-	'vs_initial': [], 
+	#'vs_initial': [], 
 
     #Start voltage
     "start": 0.0, 
 
     #End voltage
-    "end": -2.0, 
+    "end": -1.0, 
 
     #Boundary voltage in backwards scan
-    "E2": 1.4, 
+    "E2": 1.0, 
 
     #End voltage in the final cycle scan
     "Ef": 0.0, 
     
     # Scan rate in V/s. 
-    "rate": 0.05,  
+    "rate": 0.1,  
 
-    # Voltage step. dEN/1000     
+    # Voltge step. dEN/1000     
     "step": 0.001,      
 
     # Cycles, starts from 0
-    "N_Cycles": 1, 
+    "N_Cycles": 0, 
 
     #Begin step accumulation.“1” means 100% of step    
-    "Begin_measuring_I": 0.0, 
+    #"Begin_measuring_I": 0.0, 
 
     # End step accumulation. “1” means 100% of step
-    "End_measuring_I": 1.0, 
+    #"End_measuring_I": 1.0, 
 }
 
 def run_cv():
@@ -100,7 +100,7 @@ def run_cv():
 
     print("CV finished.")
 
-""""
+"""""
 def plot_v_vs_i():
     print("Reading saved CSV...")
 
@@ -138,7 +138,7 @@ def plot_v_vs_i():
 
     print(f"Saved figure to: {FIG_PATH}")
 
-"""
+"""""
 
 def plot_cv_by_cycle():
     print("Reading saved CV CSV...")
@@ -303,3 +303,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

@@ -19,25 +19,25 @@ lower_voltage_limit = ebp.configure_limit(
     ecl.LimitVariable.E,
     ecl.LimitComparison.LT,
     ecl.LimitLogic.OR,
-    -2.0,
+    -1.0,
 )
 
 upper_voltage_limit = ebp.configure_limit(
     ecl.LimitVariable.E,
     ecl.LimitComparison.GT,
     ecl.LimitLogic.OR,
-    2.0,
+    1.0,
 )
 
 params = {
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
     # (p100, n1, n10,n100, u1, u10, u,100, m1, m10, m100, a1, KEEP, BOOSTER, AUTO)
-	"current_range": ecl.IRange.AUTO, 
+	"current_range": ecl.IRange.n10, 
     
 	#Voltage range 
     #(v2_5, +-2.5V),(v5, +-5V),(v10, +-10V), (AUTO, automatic voltage range)
-	"voltage_range": ecl.ERange.AUTO, 
+	"voltage_range": ecl.ERange.v5, 
 
 	#Hardware filtering
     #(k50: 50kHz), (k1: 1kHz), (h5: 5Hz), (OFF)
@@ -61,21 +61,20 @@ params = {
            
 	#If step is vs initial or previous
     #Array of 20 boolean, defualt false
-	'vs_initial': [], 
+	#'vs_initial': [], 
 
     #Apply I (A)
      #Array of up to 20 currents, in Amps
-    "currents": [-0.000000016,0.0000000016],#List of currents in Amps
+    "currents": [-0.000000001, 0.000000001],#List of currents in Amps
     
 	#Duration of applied currents (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 150, 150], 
+    'durations': [ 30, 30],#List of durations in seconds
 
     #Maximum time interval between recordedpoints.
 	'time_interval': 1.0, 
 
  	#Max current change bewteen recorded points
-	"current_interval": 1e-3,
 
     #List of LimitConfig tuples defining limits for the technique. 
     # LimitConfig objects should be constructed with configure_limit. Up to 3 limits can be supplied.
@@ -90,7 +89,7 @@ params = {
     'cycles': 0 
 }
 
-save_path = 'data/cp-limit-noaverage'
+save_path = 'data/080326_1339_CP_-1nA_1C06_CEtoGND.csv'
 if not by_channel:
 	# file if saving individually
 	save_path += '.csv'
@@ -220,7 +219,7 @@ def plot_cp_limit_by_cycle():
     axis.legend(title="Cycles")
 
     output_path = Path(
-        "data/CPLimit_voltage_by_cycle.png"
+        "data/080326_1339_CP_-1nA_1C06_CEtoGND.png"
     )
 
     figure.savefig(
