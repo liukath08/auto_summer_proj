@@ -9,13 +9,32 @@ from easy_biologic.lib import ec_lib as ecl
 from pathlib import Path
 
 Path("data").mkdir(parents=True, exist_ok=True)
-
-
 logging.basicConfig( level = logging.DEBUG )
 
+BIOLOGIC_ADDRESS = "USB0"
+
+#program only compatible with one channel currently
 channels = [ 0 ]
-by_channel = False
-bl = ebl.BiologicDevice( 'USB0' )
+
+DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CA_LIMIT"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+CSV_PATH = DATA_DIR / "080426_1055_CP_-1nA_1C08_CETOGRND_.csv"
+FIG_PATH = DATA_DIR / "080426_1055_CP_-1nA_1C08_CETOGRND_.png"
+
+#channel configurations
+CHANNEL_CONFIGURATIONS = {
+    0: {
+        #Electrode Connection
+        #(STND, CETOGRND, WETOGRND, HV)
+        "connection": ecl.ElectrodeConnection.STND,
+
+        #Channel Mode
+        #(GROUNDED, FLOATING)
+        "mode": ecl.ChannelMode.GROUNDED,
+  
+    },
+}
 
 #Configure Limits
 lower_current_limit = ebp.configure_limit(
@@ -24,7 +43,6 @@ lower_current_limit = ebp.configure_limit(
     ecl.LimitLogic.OR,
     -2.0, #lower current limit (A)
 )
-
 upper_current_limit = ebp.configure_limit(
     ecl.LimitVariable.I,
     ecl.LimitComparison.GT,
@@ -33,6 +51,7 @@ upper_current_limit = ebp.configure_limit(
     
 )
 
+#CAlimit technique parameters
 params = { 
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
@@ -93,58 +112,61 @@ params = {
 	'cycles': 4, 
 }
 
-save_path = 'data/tests'
-if not by_channel:
-	# file if saving individually
-	save_path += '.csv'
+#apply channel config
+def apply_channel_configurations(
+    device,
+    configurations,
+):
+    """Apply and verify each channel's hardware configuration."""
 
+    for ch, configuration in configurations.items():
+        device.set_channel_configuration(
+            ch,
+            mode=configuration["mode"],
+            connection=configuration["connection"],
+        )
 
-prg = ebp.CALimit( bl, params, channels=channels )
+        applied = device.channel_configuration(ch)
 
-prg.run()
-prg.save_data( save_path, by_channel = by_channel )
+        print(
+            f"Channel {ch}: "
+            f"mode={applied.mode}, "
+            f"connection={applied.connection}"
+        )
 
-"""""
-def plot_current_vs_time():
-    print("Reading saved CSV...")
+#define program
+def run_ca_limit():
+    print("Creating BioLogic device object...")
+    bl = ebl.BiologicDevice(BIOLOGIC_ADDRESS)
 
-    # Skip the extra first line written by easy-biologic.
-    df = pd.read_csv(save_path, skiprows=1)
+    print("Creating CALimit program...")
+    ca_limit = ebp.CALimit(
+        bl,
+        params,
+        channels=channels,
+    )
 
-    time_col = "Time [s]"
-    current_col = "Current [A]"
+    print("Applying Channel Config...")
+    bl.connect()
+    apply_channel_configurations(
+    bl,
+    CHANNEL_CONFIGURATIONS, 
+    )
 
-    if time_col not in df.columns:
-        raise ValueError(f"Could not find time column: {time_col}")
+    print("Running CALimit...")
+    ca_limit.run()
 
-    if current_col not in df.columns:
-        raise ValueError(f"Could not find current column: {current_col}")
+    print(f"Saving CALimit data to: {CSV_PATH}")
+    ca_limit.save_data(CSV_PATH)
 
-    time = df[time_col]
-    current = df[current_col]
+    print("CALimit finished.")
 
-    plt.figure(figsize=(6, 5))
-    plt.plot(time, current)
-
-    plt.xlabel("Time (s)")
-    plt.ylabel("Current (A)")
-    plt.title("CALimit: Current vs Time")
-
-    plt.tight_layout()
-    plt.savefig("data/tests_current_vs_time.png", dpi=300)
-    plt.close()
-
-    print("Saved current-vs-time figure.")
-    
-
-plot_current_vs_time()
-"""
-
-def plot_ca_limit_by_cycle():
+#plot data
+def plot_ca_limit():
     print("Reading saved CALimit CSV...")
 
-    # Skip the extra first line written by easy-biologic.
-    df = pd.read_csv(save_path, skiprows=1)
+    # easy-biologic writes the channel numbers on the first line, if there are multiple channels. Skip this line when reading the CSV.
+    df = pd.read_csv(CSV_PATH, skiprows=1)
 
     time_col = "Time [s]"
     current_col = "Current [A]"
@@ -167,8 +189,6 @@ def plot_ca_limit_by_cycle():
             f"Missing required CSV columns: {missing_columns}"
         )
 
-    # Convert values to numbers, remove invalid rows, and sort
-    # measurements into acquisition order.
     plot_data = (
         df[required_columns]
         .apply(pd.to_numeric, errors="coerce")
@@ -196,18 +216,14 @@ def plot_ca_limit_by_cycle():
     ):
         cycle_number = int(cycle)
 
-        # Select a different color for every cycle.
         color_position = (
             color_index / max(number_of_cycles - 1, 1)
         )
         color = color_map(color_position)
 
-        time = cycle_data[time_col]
-        current = cycle_data[current_col]
-
         axis.plot(
-            time,
-            current,
+            cycle_data[time_col],
+            cycle_data[current_col],
             color=color,
             linewidth=1.5,
             label=f"Cycle {cycle_number}",
@@ -216,23 +232,24 @@ def plot_ca_limit_by_cycle():
     axis.set_xlabel("Time (s)")
     axis.set_ylabel("Current (A)")
     axis.set_title("CALimit: Current vs Time by Cycle")
-
     axis.grid(True, alpha=0.3)
     axis.legend(title="Cycles")
 
-    output_path = Path(
-        "data/CALimit_current_by_cycle.png"
-    )
-
     figure.savefig(
-        output_path,
+        FIG_PATH,
         dpi=300,
         bbox_inches="tight",
     )
     plt.close(figure)
 
-    print(f"Saved graph to: {output_path}")
+    print(f"Saved graph to: {FIG_PATH}")
 
-plot_ca_limit_by_cycle()
+#run program
+def main():
+    run_ca_limit()
+    plot_ca_limit()
+    print("Done.")
 
+if __name__ == "__main__":
+    main()
 

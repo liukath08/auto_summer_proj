@@ -2,7 +2,6 @@ import logging
 import matplotlib.pyplot as plt
 import pandas as pd
 
-
 import easy_biologic as ebl
 import easy_biologic.base_programs as ebp
 from easy_biologic.lib import ec_lib as ecl
@@ -12,16 +11,38 @@ from pathlib import Path
 Path("data").mkdir(parents=True, exist_ok=True)
 logging.basicConfig(level=logging.DEBUG)
 
-channels = [0]
-by_channel = False
+BIOLOGIC_ADDRESS = "USB0"
 
+#program only compatible with one channel currently
+channels = [0]
+
+DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CP_LIMIT"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+CSV_PATH = DATA_DIR / "080426_1055_CP_-1nA_1C08_CETOGRND_.csv"
+FIG_PATH = DATA_DIR / "080426_1055_CP_-1nA_1C08_CETOGRND_.png"
+
+#channel configurations
+CHANNEL_CONFIGURATIONS = {
+    0: {
+        #Electrode Connection
+        #(STND, CETOGRND, WETOGRND, HV)
+        "connection": ecl.ElectrodeConnection.STND,
+
+        #Channel Mode
+        #(GROUNDED, FLOATING)
+        "mode": ecl.ChannelMode.GROUNDED,
+  
+    },
+}
+
+#voltage limits
 lower_voltage_limit = ebp.configure_limit(
     ecl.LimitVariable.E,
     ecl.LimitComparison.LT,
     ecl.LimitLogic.OR,
     -1.0,
 )
-
 upper_voltage_limit = ebp.configure_limit(
     ecl.LimitVariable.E,
     ecl.LimitComparison.GT,
@@ -29,6 +50,7 @@ upper_voltage_limit = ebp.configure_limit(
     1.0,
 )
 
+#CPLimit technique parameters
 params = {
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
@@ -50,14 +72,6 @@ params = {
     #Hardware bandwidth 
 	#(BW1-9), 1= slow, 9=fast
 	"bandwidth": ecl.Bandwidth.BW5, 
-
-    #Electrode Connection
-    #(STND, CETOGRND, WETOGRND, HV)
-    "electrode_connection": ecl.ElectrodeConnection.CETOGRND,
-
-    #Channel Mode
-    #(GROUNDED, FLOATING)
-    "channel_mode": ecl.ChannelMode.GROUNDED,
            
 	#If step is vs initial or previous
     #Array of 20 boolean, defualt false
@@ -83,66 +97,67 @@ params = {
 
     #How to exit the technique when a limit is violated.   
     #NEXTSTEP, NEXTTECHNIQUE, STOP
-    "exit_condition": ecl.ExitCondition.STOP, 
+    "exit_condition": ecl.ExitCondition.NEXTSTEP, 
      
     # Cycles, starts from 0
     'cycles': 0 
 }
 
-save_path = 'data/080426_1055_CP_-1nA_1C08_CETOGRND_'
-if not by_channel:
-	# file if saving individually
-	save_path += '.csv'
+#apply channel configurations   
+def apply_channel_configurations(
+    device,
+    configurations,
+):
+    """Apply and verify each channel's hardware configuration."""
 
-bl = ebl.BiologicDevice("USB0")
-program = ebp.CPLimit(bl, params, channels=[0])
+    for ch, configuration in configurations.items():
+        device.set_channel_configuration(
+            ch,
+            mode=configuration["mode"],
+            connection=configuration["connection"],
+        )
 
-program.run()
-program.save_data( save_path, by_channel = by_channel )
+        applied = device.channel_configuration(ch)
+
+        print(
+            f"Channel {ch}: "
+            f"mode={applied.mode}, "
+            f"connection={applied.connection}"
+        )
+
+#define program
+def run_cp_limit():
+    print("Creating BioLogic device object...")
+    bl = ebl.BiologicDevice(BIOLOGIC_ADDRESS)
+
+    print("Creating CPLimit program...")
+    cp_limit = ebp.CPLimit(
+        bl,
+        params,
+        channels=channels,
+    )
+
+    print("Applying Channel Config...")
+    bl.connect()
+    apply_channel_configurations(
+    bl,
+    CHANNEL_CONFIGURATIONS, 
+    )
+
+    print("Running CPLimit...")
+    cp_limit.run()
+
+    print(f"Saving CPLimit data to: {CSV_PATH}")
+    cp_limit.save_data(CSV_PATH)
+
+    print("CPLimit finished.")
 
 #plot
-"""""
-def plot_voltage_vs_time():
-    print("Reading saved CPLimit CSV...")
-
-    # easy-biologic writes an extra first line.
-    # The actual column headers begin on the second line.
-    df = pd.read_csv(save_path, skiprows=1)
-
-    time_col = "Time [s]"
-    voltage_col = "Voltage [V]"
-
-    if time_col not in df.columns:
-        raise ValueError(f"Could not find time column: {time_col}")
-
-    if voltage_col not in df.columns:
-        raise ValueError(f"Could not find voltage column: {voltage_col}")
-
-    time = df[time_col]
-    voltage = df[voltage_col]
-
-    plt.figure(figsize=(6, 5))
-    plt.plot(time, voltage)
-
-    plt.xlabel("Time (s)")
-    plt.ylabel("Voltage (V)")
-    plt.title("CPLimit: Voltage vs Time")
-
-    plt.tight_layout()
-    plt.savefig(  "data/CPLimit_voltage_vs_time_noaverage.png", dpi=300)
-    plt.close()
-
-    print("Saved voltage-vs-time figure.")
-
-plot_voltage_vs_time()
-
-"""
-
-def plot_cp_limit_by_cycle():
+def plot_cp_limit():
     print("Reading saved CPLimit CSV...")
 
     # Skip the extra first line written by easy-biologic.
-    df = pd.read_csv(save_path, skiprows=1)
+    df = pd.read_csv(CSV_PATH, skiprows=1)
 
     time_col = "Time [s]"
     voltage_col = "Voltage [V]"
@@ -218,18 +233,21 @@ def plot_cp_limit_by_cycle():
     axis.grid(True, alpha=0.3)
     axis.legend(title="Cycles")
 
-    output_path = Path(
-        "data/080426_1055_CP_-1nA_1C08_CETOGRND_.png"
-    )
-
     figure.savefig(
-        output_path,
+        FIG_PATH,
         dpi=300,
         bbox_inches="tight",
     )
     plt.close(figure)
 
-    print(f"Saved graph to: {output_path}")
+    print(f"Saved graph to: {FIG_PATH}")
 
-plot_cp_limit_by_cycle()
+#run
+def main():
+    run_cp_limit()
+    plot_cp_limit()
+    print("Done.")
+
+if __name__ == "__main__":
+    main()
 

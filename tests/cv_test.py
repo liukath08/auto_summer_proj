@@ -5,20 +5,38 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 import easy_biologic as ebl
+from easy_biologic import device
 import easy_biologic.base_programs as ebp
 from easy_biologic.lib import ec_lib as ecl
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 BIOLOGIC_ADDRESS = "USB0"
-CHANNEL = 0
 
-DATA_DIR = Path("data")
-DATA_DIR.mkdir(exist_ok=True)
+#program only compatible with one channel currently
+channels = [0]
+
+DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CV"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 CSV_PATH = DATA_DIR / "080426_1043_CV_-1V-1V_100mVs-1_1C07_STND.csv"
 FIG_PATH = DATA_DIR / "080426_1043_CV_-1V-1V_100mVs-1_1C07_STND.png"
 
+#channel configurations
+CHANNEL_CONFIGURATIONS = {
+    0: {
+        #Electrode Connection
+        #(STND, CETOGRND, WETOGRND, HV)
+        "connection": ecl.ElectrodeConnection.STND,
+
+        #Channel Mode
+        #(GROUNDED, FLOATING)
+        "mode": ecl.ChannelMode.GROUNDED,
+  
+    },
+}
+
+#cv technique parameters
 params_cv = {
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
@@ -40,14 +58,6 @@ params_cv = {
 	#Hardware bandwidth 
 	#(BW1-9), 1= slow, 9=fast
 	"bandwidth": ecl.Bandwidth.BW5, 
-
-	#Electrode Connection
-    #(STND, CETOGRND, WETOGRND, HV)
-    "electrode_connection": ecl.ElectrodeConnection.STND,
-
-    #Channel Mode
-    #(GROUNDED, FLOATING)
-    "channel_mode": ecl.ChannelMode.GROUNDED,
 
     #If step is vs initial or previous
     #Array of 20 boolean, defualt false
@@ -81,6 +91,29 @@ params_cv = {
     #"End_measuring_I": 1.0, 
 }
 
+#apply channel configurations
+def apply_channel_configurations(
+    device,
+    configurations,
+):
+    """Apply and verify each channel's hardware configuration."""
+
+    for ch, configuration in configurations.items():
+        device.set_channel_configuration(
+            ch,
+            mode=configuration["mode"],
+            connection=configuration["connection"],
+        )
+
+        applied = device.channel_configuration(ch)
+
+        print(
+            f"Channel {ch}: "
+            f"mode={applied.mode}, "
+            f"connection={applied.connection}"
+        )
+
+#define program
 def run_cv():
     print("Creating BioLogic device object...")
     bl = ebl.BiologicDevice(BIOLOGIC_ADDRESS)
@@ -89,10 +122,17 @@ def run_cv():
     cv = ebp.CV(
         bl,
         params_cv,
-        channels=[CHANNEL],
+        channels=channels,
     )
 
-    print("Running CV on dummy cell...")
+    print("Applying Channel Config...")
+    bl.connect()
+    apply_channel_configurations(
+    bl,
+    CHANNEL_CONFIGURATIONS, 
+    )
+
+    print("Running CV...")
     cv.run()
 
     print(f"Saving CV data to: {CSV_PATH}")
@@ -100,47 +140,8 @@ def run_cv():
 
     print("CV finished.")
 
-"""""
-def plot_v_vs_i():
-    print("Reading saved CSV...")
-
-    # easy-biologic writes one extra first line:
-    # 0,0,0,0,0
-    # The real header starts on line 2.
-    df = pd.read_csv(CSV_PATH, skiprows=1)
-
-    print("First few rows:")
-    print(df.head())
-
-    print("Columns:")
-    print(list(df.columns))
-
-    voltage_col = "Voltage [V]"
-    current_col = "Current [A]"
-
-    if voltage_col not in df.columns:
-        raise ValueError(f"Could not find voltage column: {voltage_col}")
-
-    if current_col not in df.columns:
-        raise ValueError(f"Could not find current column: {current_col}")
-
-    voltage = df[voltage_col]
-    current = df[current_col]
-
-    plt.figure(figsize=(6, 5))
-    plt.plot(voltage, current)
-    plt.ylabel("Current, I (A)")
-    plt.xlabel("Voltage, V (V)")
-    plt.title("CV")
-    plt.tight_layout()
-    plt.savefig(FIG_PATH, dpi=300)
-    plt.close()
-
-    print(f"Saved figure to: {FIG_PATH}")
-
-"""""
-
-def plot_cv_by_cycle():
+#plot data
+def plot_cv():
     print("Reading saved CV CSV...")
 
     df = pd.read_csv(CSV_PATH, skiprows=1)
@@ -296,9 +297,10 @@ def plot_cv_by_cycle():
 
     print(f"Saved graphs to: {FIG_PATH}")
 
+#run program
 def main():
     run_cv()
-    plot_cv_by_cycle()
+    plot_cv()
     print("Done.")
 
 if __name__ == "__main__":

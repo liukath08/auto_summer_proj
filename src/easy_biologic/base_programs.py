@@ -798,7 +798,7 @@ class CPLimit(BiologicProgram):
                 "Record_every_dT": ch_params["time_interval"],
                 "Record_every_dE": ch_params["voltage_interval"],
                 "Exit_Cond": [ch_params["exit_condition"].value] * steps,
-                "N_Cycles": 0,
+                "N_Cycles": ch_params["cycles"] if "cycles" in ch_params else 0,
             }
 
             for i in range(3):
