@@ -89,7 +89,7 @@ params = {
     'cycles': 0 
 }
 
-save_path = 'data/080326_1339_CP_-1nA_1C06_CEtoGND.csv'
+save_path = 'data/080426_1055_CP_-1nA_1C08_CETOGRND_'
 if not by_channel:
 	# file if saving individually
 	save_path += '.csv'
@@ -219,7 +219,7 @@ def plot_cp_limit_by_cycle():
     axis.legend(title="Cycles")
 
     output_path = Path(
-        "data/080326_1339_CP_-1nA_1C06_CEtoGND.png"
+        "data/080426_1055_CP_-1nA_1C08_CETOGRND_.png"
     )
 
     figure.savefig(

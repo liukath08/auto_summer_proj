@@ -16,8 +16,8 @@ CHANNEL = 0
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080326_1319_CV_-1V-1V_100mVs-1_1C06_CEtoGND.csv"
-FIG_PATH = DATA_DIR / "080326_1319_CV_-1V-1V_100mVs-1_1C06_CEtoGND.png"
+CSV_PATH = DATA_DIR / "080426_1043_CV_-1V-1V_100mVs-1_1C07_STND.csv"
+FIG_PATH = DATA_DIR / "080426_1043_CV_-1V-1V_100mVs-1_1C07_STND.png"
 
 params_cv = {
     #Current range  
@@ -43,7 +43,7 @@ params_cv = {
 
 	#Electrode Connection
     #(STND, CETOGRND, WETOGRND, HV)
-    "electrode_connection": ecl.ElectrodeConnection.CETOGRND,
+    "electrode_connection": ecl.ElectrodeConnection.STND,
 
     #Channel Mode
     #(GROUNDED, FLOATING)
