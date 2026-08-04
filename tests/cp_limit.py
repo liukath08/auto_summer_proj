@@ -19,15 +19,15 @@ channels = [0]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CP_LIMIT"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080426_1055_CP_-1nA_1C08_CETOGRND_.csv"
-FIG_PATH = DATA_DIR / "080426_1055_CP_-1nA_1C08_CETOGRND_.png"
+CSV_PATH = DATA_DIR / "080426_1344_CP_-1nA_1C13_CETOGRND_.csv"
+FIG_PATH = DATA_DIR / "080426_1344_CP_-1nA_1C13_CETOGRND_.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
     0: {
         #Electrode Connection
         #(STND, CETOGRND, WETOGRND, HV)
-        "connection": ecl.ElectrodeConnection.STND,
+        "connection": ecl.ElectrodeConnection.CETOGRND,
 
         #Channel Mode
         #(GROUNDED, FLOATING)
@@ -55,7 +55,7 @@ params = {
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
     # (p100, n1, n10,n100, u1, u10, u,100, m1, m10, m100, a1, KEEP, BOOSTER, AUTO)
-	"current_range": ecl.IRange.n10, 
+	"current_range": ecl.IRange.n1, 
     
 	#Voltage range 
     #(v2_5, +-2.5V),(v5, +-5V),(v10, +-10V), (AUTO, automatic voltage range)
@@ -79,11 +79,11 @@ params = {
 
     #Apply I (A)
      #Array of up to 20 currents, in Amps
-    "currents": [-0.000000001, 0.000000001],#List of currents in Amps
+    "currents": [-0.000000001, 0.000000001, -0.000000001, 0.000000001],#List of currents in Amps
     
 	#Duration of applied currents (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 30, 30],#List of durations in seconds
+    'durations': [ 30, 30, 30, 30],#List of durations in seconds
 
     #Maximum time interval between recordedpoints.
 	'time_interval': 1.0, 
@@ -100,7 +100,7 @@ params = {
     "exit_condition": ecl.ExitCondition.NEXTSTEP, 
      
     # Cycles, starts from 0
-    'cycles': 0 
+    'cycles': 0
 }
 
 #apply channel configurations   

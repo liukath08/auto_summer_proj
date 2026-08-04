@@ -19,15 +19,15 @@ channels = [0]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CV"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080426_1043_CV_-1V-1V_100mVs-1_1C07_STND.csv"
-FIG_PATH = DATA_DIR / "080426_1043_CV_-1V-1V_100mVs-1_1C07_STND.png"
+CSV_PATH = DATA_DIR / "080426_1342_CV_-1V-1V_100mVs-1_1C12_STND.csv"
+FIG_PATH = DATA_DIR / "080426_1342_CV_-1V-1V_100mVs-1_1C12_STND.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
     0: {
         #Electrode Connection
         #(STND, CETOGRND, WETOGRND, HV)
-        "connection": ecl.ElectrodeConnection.STND,
+        "connection": ecl.ElectrodeConnection.CETOGRND,
 
         #Channel Mode
         #(GROUNDED, FLOATING)
