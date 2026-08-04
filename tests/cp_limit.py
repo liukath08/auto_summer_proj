@@ -19,8 +19,8 @@ channels = [0]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CP_LIMIT"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080426_1344_CP_-1nA_1C13_CETOGRND_.csv"
-FIG_PATH = DATA_DIR / "080426_1344_CP_-1nA_1C13_CETOGRND_.png"
+CSV_PATH = DATA_DIR / "080426_1500_CP_-1nA_1C13_CETOGRND_.csv"
+FIG_PATH = DATA_DIR / "080426_1500_CP_-1nA_1C13_CETOGRND_.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
@@ -79,11 +79,11 @@ params = {
 
     #Apply I (A)
      #Array of up to 20 currents, in Amps
-    "currents": [-0.000000001, 0.000000001, -0.000000001, 0.000000001],#List of currents in Amps
+    "currents": [-0.000000001, 0.000000001],#List of currents in Amps
     
 	#Duration of applied currents (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 30, 30, 30, 30],#List of durations in seconds
+    'durations': [ 30, 30],#List of durations in seconds
 
     #Maximum time interval between recordedpoints.
 	'time_interval': 1.0, 
@@ -95,8 +95,7 @@ params = {
     "step_limits": [
     [lower_voltage_limit], 
     [upper_voltage_limit],  
-    [lower_voltage_limit],  
-    [upper_voltage_limit],  
+   
 ],
 
 
@@ -105,7 +104,7 @@ params = {
     "exit_condition": ecl.ExitCondition.NEXTSTEP, 
      
     # Cycles, starts from 0
-    'cycles': 0
+    'cycles': 1
 }
 
 #apply channel configurations   
