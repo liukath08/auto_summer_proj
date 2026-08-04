@@ -742,6 +742,7 @@ class CPLimit(BiologicProgram):
             "time_interval": 1.0,
             "voltage_interval": 1e-3,
             "limits": [],
+            "step_limits": None,
             "exit_condition": ecl.ExitCondition.STOP,
         }
 
@@ -801,18 +802,65 @@ class CPLimit(BiologicProgram):
                 "N_Cycles": ch_params["cycles"] if "cycles" in ch_params else 0,
             }
 
-            for i in range(3):
-                try:
-                    config = ch_params["limits"][i]
-                    params[ch][f"Test{i + 1}_Config"] = [config.config_int] * steps
-                    params[ch][f"Test{i + 1}_Value"] = [config.value] * steps
-                except IndexError:
-                    params[ch][f"Test{i + 1}_Config"] = 0
-                    params[ch][f"Test{i + 1}_Value"] = 0
+            step_limits = ch_params["step_limits"]
 
-            params[ch].update(map_hardware_params(ch_params, by_channel=False))
+            # Preserve the original behavior when omitted.
+            if step_limits is None:
+                step_limits = [
+                    ch_params["limits"]
+                    for _ in range(steps)
+                ]
 
-        return self._run("cplimit", params, retrieve_data=retrieve_data)
+            if len(step_limits) != steps:
+                raise ValueError(
+                    "step_limits must contain one list "
+                    "for every current step."
+                )
+
+            if any(
+                len(limits) > 3
+                for limits in step_limits
+            ):
+                raise ValueError(
+                    "CPLimit supports at most three "
+                    "limits per step."
+                )
+
+            for test_index in range(3):
+                test_configs = []
+                test_values = []
+
+                for limits_for_step in step_limits:
+                    if test_index < len(limits_for_step):
+                        limit = limits_for_step[test_index]
+                        test_configs.append(limit.config_int)
+                        test_values.append(limit.value)
+                    else:
+                        test_configs.append(0)
+                        test_values.append(0.0)
+
+                test_number = test_index + 1
+
+                params[ch][
+                    f"Test{test_number}_Config"
+                ] = test_configs
+
+                params[ch][
+                    f"Test{test_number}_Value"
+                ] = test_values
+
+            params[ch].update(
+                map_hardware_params(
+                    ch_params,
+                    by_channel=False,
+                )
+            )
+
+        return self._run(
+            "cplimit",
+            params,
+            retrieve_data=retrieve_data,
+        )
 
     def update_currents(self, currents, durations=None, vs_initial=None):
         """Update current and duration parameters."""

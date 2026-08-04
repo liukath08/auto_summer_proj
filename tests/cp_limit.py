@@ -91,8 +91,13 @@ params = {
  	#Max current change bewteen recorded points
 
     #List of LimitConfig tuples defining limits for the technique. 
-    # LimitConfig objects should be constructed with configure_limit. Up to 3 limits can be supplied.
-    "limits": [lower_voltage_limit, upper_voltage_limit], 
+    # The order of the limits in the list corresponds to the order of the steps in the technique.
+    "step_limits": [
+    [lower_voltage_limit], 
+    [upper_voltage_limit],  
+    [lower_voltage_limit],  
+    [upper_voltage_limit],  
+],
 
 
     #How to exit the technique when a limit is violated.   

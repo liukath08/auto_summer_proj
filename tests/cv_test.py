@@ -105,14 +105,6 @@ def apply_channel_configurations(
             connection=configuration["connection"],
         )
 
-        applied = device.channel_configuration(ch)
-
-        print(
-            f"Channel {ch}: "
-            f"mode={applied.mode}, "
-            f"connection={applied.connection}"
-        )
-
 #define program
 def run_cv():
     print("Creating BioLogic device object...")
