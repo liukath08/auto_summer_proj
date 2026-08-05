@@ -255,6 +255,72 @@ def map_hardware_params(params, by_channel=True, keep=False, inplace=False):
         convert_enums=True,
     )
 
+XCTR_RECORD_ECE = 0x01
+XCTR_EXTRA_MEASUREMENT_TIME = 5e-6
+
+def record_ece_enabled(params):
+    """Return the common Ece setting for all program channels."""
+
+    settings = {
+        bool(channel_params.get("record_ece", False))
+        for channel_params in params.values()
+    }
+
+    if len(settings) > 1:
+        raise ValueError(
+            "record_ece must have the same value "
+            "on every channel in a program."
+        )
+
+    return settings.pop() if settings else False
+
+def add_ece_recording(
+    technique_params,
+    channel_params,
+    base_timebase,
+):
+    """Add the parameters needed to record Ece."""
+
+    if not channel_params.get("record_ece", False):
+        return
+
+    ece_range = channel_params.get(
+        "ece_range",
+        ecl.ERange.AUTO,
+    )
+
+    if isinstance(ece_range, Enum):
+        ece_range = ece_range.value
+
+    # map_hardware_params() has already mapped a user-provided
+    # timebase to tb. If none was provided, use the technique's
+    # VMP-300 minimum.
+    original_timebase = float(
+        technique_params.get("tb", base_timebase)
+    )
+
+    technique_params.update(
+        {
+            "xctr": XCTR_RECORD_ECE,
+            "R32": int(ece_range),
+            "tb": (
+                original_timebase
+                + XCTR_EXTRA_MEASUREMENT_TIME
+            ),
+        }
+    )
+
+
+def fields_with_ece(fields):
+    """Append Ece to a technique's raw data layout."""
+
+    return [
+        *fields,
+        dp.FieldInfo(
+            "ece",
+            ecl.ParameterType.SINGLE,
+        ),
+    ]
 
 class OCV(BiologicProgram):
     """Runs an open circuit voltage scan."""
@@ -586,6 +652,11 @@ class CALimit(BiologicProgram):
                 If no limits are supplied, you should use the standard
                 CA technique instead of CALimit.
                 [Default: []]
+            step_limits: List containing one list of LimitConfig tuples for
+                each voltage step. Each step supports up to 3 limits. When
+                supplied, this overrides limits and must have the same length
+                as voltages.
+                [Default: None]
             exit_condition: How to exit the technique when a limit is
                 violated. Use ec_lib.ExitCondition.
                 [Default: ExitCondition.STOP]
@@ -597,6 +668,7 @@ class CALimit(BiologicProgram):
             "current_interval": 1e-3,
             "current_range": ecl.IRange.m10,
             "limits": [],
+            "step_limits": None,
             "exit_condition": ecl.ExitCondition.STOP,
         }
 
@@ -652,16 +724,52 @@ class CALimit(BiologicProgram):
                 "N_Cycles": ch_params["cycles"] if "cycles" in ch_params else 0,
             }
 
-            # Set limit (test) configuration
-            for i in range(3):
-                try:
-                    config = ch_params["limits"][i]
-                    params[ch][f"Test{i + 1}_Config"] = [config.config_int] * steps
-                    params[ch][f"Test{i + 1}_Value"] = [config.value] * steps
-                except IndexError:
-                    # No limit supplied - inactive test
-                    params[ch][f"Test{i + 1}_Config"] = 0
-                    params[ch][f"Test{i + 1}_Value"] = 0
+            step_limits = ch_params["step_limits"]
+
+            # Preserve the original behavior when omitted.
+            if step_limits is None:
+                step_limits = [
+                    ch_params["limits"]
+                    for _ in range(steps)
+                ]
+
+            if len(step_limits) != steps:
+                raise ValueError(
+                    "step_limits must contain one list "
+                    "for every voltage step."
+                )
+
+            if any(
+                len(limits) > 3
+                for limits in step_limits
+            ):
+                raise ValueError(
+                    "CALimit supports at most three "
+                    "limits per step."
+                )
+
+            for test_index in range(3):
+                test_configs = []
+                test_values = []
+
+                for limits_for_step in step_limits:
+                    if test_index < len(limits_for_step):
+                        limit = limits_for_step[test_index]
+                        test_configs.append(limit.config_int)
+                        test_values.append(limit.value)
+                    else:
+                        test_configs.append(0)
+                        test_values.append(0.0)
+
+                test_number = test_index + 1
+
+                params[ch][
+                    f"Test{test_number}_Config"
+                ] = test_configs
+
+                params[ch][
+                    f"Test{test_number}_Value"
+                ] = test_values
 
             params[ch].update(map_hardware_params(ch_params, by_channel=False))
 
@@ -1302,39 +1410,119 @@ class CV(BiologicProgram):
             "N_Cycles": 0,
             "Begin_measuring_I": 0.5,
             "End_measuring_I": 1,
+            "record_ece": True,
         }
         channels = kwargs["channels"] if ("channels" in kwargs) else None
         params = set_defaults(params, defaults, channels)
 
         super().__init__(device, params, **kwargs)
 
+        self._record_ece = record_ece_enabled(
+            self.params
+        )
+
+        is_vmp300_family = ecl.is_in_SP300_family(
+            self.device.kind
+        )
+
+        if (
+            self._record_ece
+            and not is_vmp300_family
+        ):
+            raise ValueError(
+                "XCTR Ece recording is only supported "
+                "on VMP-300 family devices."
+            )
+
         self._techniques = ["cv"]
         self._parameter_types = tfs.CV
-        self._data_fields = (
+
+        base_fields = (
             dp.SP300_Fields.CV
-            if ecl.is_in_SP300_family(self.device.kind)
+            if is_vmp300_family
             else dp.VMP3_Fields.CV
         )
 
-        self.field_titles = [
-            "Voltage [V]",
-            "Current [A]",
-            "Time [s]",
-            "Power [W]",
-            "Cycle",
-        ]
-
-        self._fields = namedtuple(
-            "CV_Datum", ["voltage", "current", "time", "power", "cycle"]
+        self._data_fields = (
+            fields_with_ece(base_fields)
+            if self._record_ece
+            else base_fields
         )
 
-        self._field_values = lambda datum, segment: (
-            datum.voltage,
-            datum.current,
-            dp.calculate_time(datum.t_high, datum.t_low, segment.info, segment.values),
-            datum.voltage * datum.current,  # power
-            datum.cycle,
-        )
+        if self._record_ece:
+            self.field_titles = [
+                "Voltage [V]",
+                "Ece [V]",
+                "Current [A]",
+                "Time [s]",
+                "Power [W]",
+                "Cycle",
+            ]
+
+            self._fields = namedtuple(
+                "CV_Datum",
+                [
+                    "voltage",
+                    "ece",
+                    "current",
+                    "time",
+                    "power",
+                    "cycle",
+                ],
+            )
+
+            self._field_values = (
+                lambda datum, segment: (
+                    datum.voltage,
+                    datum.ece,
+                    datum.current,
+                    dp.calculate_time(
+                        datum.t_high,
+                        datum.t_low,
+                        segment.info,
+                        segment.values,
+                    ),
+                    datum.voltage
+                    * datum.current,
+                    datum.cycle,
+                )
+            )
+
+        else:
+            self.field_titles = [
+                "Voltage [V]",
+                "Current [A]",
+                "Time [s]",
+                "Power [W]",
+                "Cycle",
+            ]
+
+            self._fields = namedtuple(
+                "CV_Datum",
+                [
+                    "voltage",
+                    "current",
+                    "time",
+                    "power",
+                    "cycle",
+                ],
+            )
+
+            self._field_values = (
+                lambda datum, segment: (
+                    datum.voltage,
+                    datum.current,
+                    dp.calculate_time(
+                        datum.t_high,
+                        datum.t_low,
+                        segment.info,
+                        segment.values,
+                    ),
+                    datum.voltage
+                    * datum.current,
+                    datum.cycle,
+                )
+            )
 
     def run(self, retrieve_data=True):
         """
@@ -1373,6 +1561,13 @@ class CV(BiologicProgram):
                 ],  # finish measurement at end of interval
             }
             params[ch].update(map_hardware_params(ch_params, by_channel=False))
+
+            if self._record_ece:
+                add_ece_recording(
+                    params[ch],
+                    ch_params,
+                    base_timebase=45e-6,
+                )
 
         # run technique
         data = self._run("cv", params, retrieve_data=retrieve_data)

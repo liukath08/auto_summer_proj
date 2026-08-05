@@ -101,8 +101,11 @@ params = {
 	"current_interval": 1e-3,
 	
 	#List of LimitConfig tuples defining limits for the technique. 
-	# LimitConfig objects should be constructed with configure_limit. Up to 3 limits can be supplied.
-	"limits": [lower_current_limit, upper_current_limit], 
+    #The order of the limits in the list corresponds to the order of the steps in the technique.
+    "step_limits": [
+    [lower_current_limit], 
+    [upper_current_limit], 
+    ], 
 
 	#How to exit the technique when a limit is violated.   
     #NEXTSTEP, NEXTTECHNIQUE, STOP
