@@ -19,8 +19,8 @@ channels = [0]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CV"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080426_1342_CV_-1V-1V_100mVs-1_1C12_STND.csv"
-FIG_PATH = DATA_DIR / "080426_1342_CV_-1V-1V_100mVs-1_1C12_STND.png"
+CSV_PATH = DATA_DIR / "080526_0947_CV_-1V-1V_100mVs-1_1C16_CETOGRND.csv"
+FIG_PATH = DATA_DIR / "080526_0947_CV_-1V-1V_100mVs-1_1C16_CETOGRND.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
@@ -46,10 +46,6 @@ params_cv = {
 	#Ewe range 
     #(v2_5, +-2.5V),(v5, +-5V),(v10, +-10V), (AUTO, automatic voltage range)
 	"voltage_range": ecl.ERange.v2_5, 
-
-    #Ece range
-    #(v2_5, +-2.5V),(v5, +-5V),(v10, +-10V), (AUTO, automatic voltage range)
-    "ece_range": ecl.ERange.AUTO,
 
 	#Hardware filtering
     #(k50: 50kHz), (k1: 1kHz), (h5: 5Hz), (OFF)

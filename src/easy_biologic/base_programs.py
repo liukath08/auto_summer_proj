@@ -255,7 +255,7 @@ def map_hardware_params(params, by_channel=True, keep=False, inplace=False):
         convert_enums=True,
     )
 
-XCTR_RECORD_ECE = 0x01
+XCTR_RECORD_ECE = 0b10000000
 XCTR_EXTRA_MEASUREMENT_TIME = 5e-6
 
 def record_ece_enabled(params):
@@ -302,7 +302,6 @@ def add_ece_recording(
     technique_params.update(
         {
             "xctr": XCTR_RECORD_ECE,
-            "R32": int(ece_range),
             "tb": (
                 original_timebase
                 + XCTR_EXTRA_MEASUREMENT_TIME
