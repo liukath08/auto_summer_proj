@@ -137,6 +137,67 @@ def apply_channel_configurations(
             f"connection={applied.connection}"
         )
 
+#format data and save
+def save_ca_data(
+    ca_program,
+    output_path,
+):
+    """Save CA/CALimit data in the same format as CP."""
+
+    rows = []
+
+    for channel in ca_program.channels:
+        for datum in ca_program.data[channel]:
+            if not hasattr(datum, "ece"):
+                raise ValueError(
+                    "CA data does not contain Ece. "
+                    "Confirm record_ece=True."
+                )
+
+            if not hasattr(datum, "charge"):
+                raise ValueError(
+                    "CA data does not contain Q-Q0. "
+                    "Confirm XCTR charge recording is enabled."
+                )
+
+            rows.append(
+                {
+                    "time(sec)": datum.time,
+                    "Ewe(V)": datum.voltage,
+                    "Q-Q0(mAh)": datum.charge,
+                    "I(mA)": datum.current * 1000,
+                    "cycle#": int(datum.cycle),
+                    "Ece (V)": datum.ece,
+                }
+            )
+
+    if not rows:
+        raise ValueError(
+            "No CA measurements were collected."
+        )
+
+    dataframe = pd.DataFrame(
+        rows,
+        columns=[
+            "time(sec)",
+            "Ewe(V)",
+            "Q-Q0(mAh)",
+            "I(mA)",
+            "cycle#",
+            "Ece (V)",
+        ],
+    )
+
+    dataframe.to_csv(
+        output_path,
+        index=False,
+    )
+
+    print(
+        f"Saved {len(dataframe)} CA measurements "
+        f"to: {output_path}"
+    )
+
 #define program
 def run_ca_limit():
     print("Creating BioLogic device object...")
