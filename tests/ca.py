@@ -19,8 +19,8 @@ channels = [ 0 ]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CA_LIMIT"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080426_1055_CA_1C08_CETOGRND_.csv"
-FIG_PATH = DATA_DIR / "080426_1055_CA_1C08_CETOGRND_.png"
+CSV_PATH = DATA_DIR / "080526_1135_CA_1C08_STND_.csv"
+FIG_PATH = DATA_DIR / "080526_1135_CA_1C08_STND_.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
@@ -83,7 +83,7 @@ params = {
 
 	#Electrode Connection
     #(STND, CETOGRND, WETOGRND, HV)
-    "electrode_connection": ecl.ElectrodeConnection.CETOGRND,
+    "electrode_connection": ecl.ElectrodeConnection.STND,
 
     #Channel Mode
     #(GROUNDED, FLOATING)
@@ -109,9 +109,13 @@ params = {
 	
     #List of LimitConfig tuples defining limits for the technique. 
     #The order of the limits in the list corresponds to the order of the steps in the technique.
-    "step_limits": [
-    [lower_current_limit], 
-    [upper_current_limit], 
+    "step_limits": [ 
+    [upper_current_limit],
+    [upper_current_limit],
+    [upper_current_limit],
+    [lower_current_limit],
+    [upper_current_limit],
+    [lower_current_limit],
     ],
 
 	#How to exit the technique when a limit is violated.   
