@@ -161,7 +161,7 @@ def save_cp_limit_data(
                 {
                     "time(sec)": datum.time,
                     "Ewe(V)": datum.voltage,
-                    "Q-Q0(mAh)": datum.charge,
+                    "Q-Q0(mAh)": datum.charge*.2777777777777778,
                     "I(mA)": datum.current * 1000,
                     "cycle#": int(datum.cycle),
                     "Ece (V)": datum.ece,
@@ -234,13 +234,13 @@ def plot_cp_limit():
     time_col = "time(sec)"
     voltage_col = "Ewe(V)"
     cycle_col = "cycle#"
-    ece_col = "Ece (V)"
+    charge_col = "Q-Q0(mAh)"
 
     required_columns = [
         time_col,
         voltage_col,
         cycle_col,
-        ece_col,
+        charge_col,
     ]
 
     missing_columns = [
@@ -281,7 +281,7 @@ def plot_cp_limit():
         constrained_layout=True,
     )
 
-    voltage_axis, ece_axis = axes
+    voltage_axis, charge_axis = axes
 
     for color_index, (cycle, cycle_data) in enumerate(
         cycle_groups
@@ -296,7 +296,7 @@ def plot_cp_limit():
 
         time = cycle_data[time_col]
         voltage = cycle_data[voltage_col]
-        ece = cycle_data[ece_col]
+        charge = cycle_data[charge_col]
 
         voltage_axis.plot(
             time,
@@ -306,9 +306,9 @@ def plot_cp_limit():
             label=f"Cycle {cycle_number}",
         )
 
-        ece_axis.plot(
+        charge_axis.plot(
             time,
-            ece,
+            charge,
             color=color,
             linewidth=1.5,
             label=f"Cycle {cycle_number}",
@@ -317,17 +317,9 @@ def plot_cp_limit():
     voltage_axis.set_ylabel("Ewe (V)")
     voltage_axis.set_title("CPLimit: Ewe vs Time by Cycle")
 
-    ece_axis.set_xlabel("Time (s)")
-    ece_axis.set_ylabel("Ece (V)")
-    ece_axis.set_title("CPLimit: Ece vs Time by Cycle")
-
-    # Display the full Ece voltage instead of Matplotlib's
-    # offset notation, such as 1e-7 + 1.
-    ece_axis.ticklabel_format(
-        axis="y",
-        style="plain",
-        useOffset=False,
-    )
+    charge_axis.set_xlabel("Time (s)")
+    charge_axis.set_ylabel("Q-Q0 (mAh)")
+    charge_axis.set_title("CPLimit: Q-Q0 vs Time by Cycle")
 
     for axis in axes:
         axis.grid(True, alpha=0.3)
