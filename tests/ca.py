@@ -19,8 +19,8 @@ channels = [ 0 ]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CA_LIMIT"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080526_1135_CA_1C08_STND_.csv"
-FIG_PATH = DATA_DIR / "080526_1135_CA_1C08_STND_.png"
+CSV_PATH = DATA_DIR / "080526_1218_CA_1C08_CETOGRND_.csv"
+FIG_PATH = DATA_DIR / "080526_1218_CA_1C08_CETOGRND_.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
@@ -80,29 +80,21 @@ params = {
     # Original CALimit timebase. The program adds 6 us for
     # the two XCTR fields, producing a final 40 us timebase.
     "timebase": 34e-6,
-
-	#Electrode Connection
-    #(STND, CETOGRND, WETOGRND, HV)
-    "electrode_connection": ecl.ElectrodeConnection.STND,
-
-    #Channel Mode
-    #(GROUNDED, FLOATING)
-    "channel_mode": ecl.ChannelMode.GROUNDED,
            
 	#If step is vs initial or previous
     #Array of 20 boolean, defualt false
-	'vs_initial': False,
+	#'vs_initial': False,
 
 	 #Apply Ewe (V)
 	 #Array of up to 20 voltages, in Volts
-    'voltages':  [ 0, 1,2,-2,1,0 ], 
+    'voltages':  [ 0, .5, -1, .1, 0 ], 
 
 	#Duration of applied voltage (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 10,10,10,10,10,10 ], 
+    'durations': [ 10,10,10,10,10 ], 
 
 	#Maximum time interval between recordedpoints.
-	'time_interval': 1.0, 
+	'time_interval': .5, 
 
  	#Max current change bewteen recorded points
 	"current_interval": 1e-3,
@@ -110,7 +102,6 @@ params = {
     #List of LimitConfig tuples defining limits for the technique. 
     #The order of the limits in the list corresponds to the order of the steps in the technique.
     "step_limits": [ 
-    [upper_current_limit],
     [upper_current_limit],
     [upper_current_limit],
     [lower_current_limit],
