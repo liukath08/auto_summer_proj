@@ -28,6 +28,7 @@ class CA(Enum):
     Record_every_dT = float
     Record_every_dI = float
     N_Cycles = int
+    xctr = int
     
 
 

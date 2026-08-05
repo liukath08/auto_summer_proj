@@ -19,15 +19,15 @@ channels = [ 0 ]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CA_LIMIT"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080426_1055_CP_-1nA_1C08_CETOGRND_.csv"
-FIG_PATH = DATA_DIR / "080426_1055_CP_-1nA_1C08_CETOGRND_.png"
+CSV_PATH = DATA_DIR / "080426_1055_CA_1C08_CETOGRND_.csv"
+FIG_PATH = DATA_DIR / "080426_1055_CA_1C08_CETOGRND_.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
     0: {
         #Electrode Connection
         #(STND, CETOGRND, WETOGRND, HV)
-        "connection": ecl.ElectrodeConnection.STND,
+        "connection": ecl.ElectrodeConnection.CETOGRND,
 
         #Channel Mode
         #(GROUNDED, FLOATING)
@@ -72,11 +72,18 @@ params = {
 
 	#Hardware bandwidth 
 	#(BW1-9), 1= slow, 9=fast
-	"bandwidth": ecl.Bandwidth.BW5, 
+	"bandwidth": ecl.Bandwidth.BW5,
+
+    # Record Ece and Q-Q0 through XCTR.
+    "record_ece": True,
+
+    # Original CALimit timebase. The program adds 6 us for
+    # the two XCTR fields, producing a final 40 us timebase.
+    "timebase": 34e-6,
 
 	#Electrode Connection
     #(STND, CETOGRND, WETOGRND, HV)
-    "electrode_connection": ecl.ElectrodeConnection.STND,
+    "electrode_connection": ecl.ElectrodeConnection.CETOGRND,
 
     #Channel Mode
     #(GROUNDED, FLOATING)
@@ -84,7 +91,7 @@ params = {
            
 	#If step is vs initial or previous
     #Array of 20 boolean, defualt false
-	'vs_initial': [], 
+	'vs_initial': False,
 
 	 #Apply Ewe (V)
 	 #Array of up to 20 voltages, in Volts
@@ -92,7 +99,7 @@ params = {
 
 	#Duration of applied voltage (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 2,2,2,2,2,2 ], 
+    'durations': [ 10,10,10,10,10,10 ], 
 
 	#Maximum time interval between recordedpoints.
 	'time_interval': 1.0, 
@@ -100,19 +107,19 @@ params = {
  	#Max current change bewteen recorded points
 	"current_interval": 1e-3,
 	
-	#List of LimitConfig tuples defining limits for the technique. 
+    #List of LimitConfig tuples defining limits for the technique. 
     #The order of the limits in the list corresponds to the order of the steps in the technique.
     "step_limits": [
     [lower_current_limit], 
     [upper_current_limit], 
-    ], 
+    ],
 
 	#How to exit the technique when a limit is violated.   
     #NEXTSTEP, NEXTTECHNIQUE, STOP
 	"exit_condition": ecl.ExitCondition.STOP, 
      
 	# Cycles, starts from 0
-	'cycles': 4, 
+	'cycles': 0 
 }
 
 #apply channel config
@@ -221,7 +228,10 @@ def run_ca_limit():
     ca_limit.run()
 
     print(f"Saving CALimit data to: {CSV_PATH}")
-    ca_limit.save_data(CSV_PATH)
+    save_ca_data(
+        ca_limit,
+        CSV_PATH,
+    )
 
     print("CALimit finished.")
 
@@ -229,17 +239,18 @@ def run_ca_limit():
 def plot_ca_limit():
     print("Reading saved CALimit CSV...")
 
-    # easy-biologic writes the channel numbers on the first line, if there are multiple channels. Skip this line when reading the CSV.
-    df = pd.read_csv(CSV_PATH, skiprows=1)
+    df = pd.read_csv(CSV_PATH)
 
-    time_col = "Time [s]"
-    current_col = "Current [A]"
-    cycle_col = "Cycle"
+    time_col = "time(sec)"
+    current_col = "I(mA)"
+    cycle_col = "cycle#"
+    ece_col = "Ece (V)"
 
     required_columns = [
         time_col,
         current_col,
         cycle_col,
+        ece_col,
     ]
 
     missing_columns = [
@@ -270,10 +281,15 @@ def plot_ca_limit():
     number_of_cycles = len(cycle_groups)
     color_map = plt.get_cmap("turbo")
 
-    figure, axis = plt.subplots(
-        figsize=(8, 6),
+    figure, axes = plt.subplots(
+        nrows=2,
+        ncols=1,
+        figsize=(9, 9),
+        sharex=True,
         constrained_layout=True,
     )
+
+    current_axis, ece_axis = axes
 
     for color_index, (cycle, cycle_data) in enumerate(
         cycle_groups
@@ -285,19 +301,42 @@ def plot_ca_limit():
         )
         color = color_map(color_position)
 
-        axis.plot(
-            cycle_data[time_col],
-            cycle_data[current_col],
+        time = cycle_data[time_col]
+        current = cycle_data[current_col]
+        ece = cycle_data[ece_col]
+
+        current_axis.plot(
+            time,
+            current,
             color=color,
             linewidth=1.5,
             label=f"Cycle {cycle_number}",
         )
 
-    axis.set_xlabel("Time (s)")
-    axis.set_ylabel("Current (A)")
-    axis.set_title("CALimit: Current vs Time by Cycle")
-    axis.grid(True, alpha=0.3)
-    axis.legend(title="Cycles")
+        ece_axis.plot(
+            time,
+            ece,
+            color=color,
+            linewidth=1.5,
+            label=f"Cycle {cycle_number}",
+        )
+
+    current_axis.set_ylabel("Current (mA)")
+    current_axis.set_title("CALimit: Current vs Time by Cycle")
+
+    ece_axis.set_xlabel("Time (s)")
+    ece_axis.set_ylabel("Ece (V)")
+    ece_axis.set_title("CALimit: Ece vs Time by Cycle")
+
+    ece_axis.ticklabel_format(
+        axis="y",
+        style="plain",
+        useOffset=False,
+    )
+
+    for axis in axes:
+        axis.grid(True, alpha=0.3)
+        axis.legend(title="Cycles")
 
     figure.savefig(
         FIG_PATH,

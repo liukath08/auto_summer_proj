@@ -395,6 +395,12 @@ class CA(BiologicProgram):
                 [Default: 1]
             current_interval: Maximum current change between points in Amps.
                 [Default: 0.001]
+            record_ece: Record Ece and Q-Q0 using XCTR.
+                This is only supported by VMP-300 family devices.
+                [Default: False]
+            timebase: Original CA timebase before the XCTR delay.
+                The VMP-300 default is 21 us.
+                [Default: 21e-6]
         :param **kwargs: Parameters passed to BiologicProgram.
         """
         defaults = {
@@ -402,11 +408,30 @@ class CA(BiologicProgram):
             "time_interval": 1.0,
             "current_interval": 1e-3,
             "current_range": ecl.IRange.m10,
+            "record_ece": False,
+            "timebase": 21e-6,
         }
 
         channels = kwargs["channels"] if ("channels" in kwargs) else None
         params = set_defaults(params, defaults, channels)
         super().__init__(device, params, **kwargs)
+
+        self._record_ece = record_ece_enabled(
+            self.params
+        )
+
+        is_vmp300_family = ecl.is_in_SP300_family(
+            self.device.kind
+        )
+
+        if (
+            self._record_ece
+            and not is_vmp300_family
+        ):
+            raise ValueError(
+                "XCTR Ece and charge recording is only "
+                "supported on VMP-300 family devices."
+            )
 
         # Set voltage range based on voltage steps
         for ch, ch_params in self.params.items():
@@ -416,13 +441,19 @@ class CA(BiologicProgram):
 
         self._techniques = ["ca"]
         self._parameter_types = tfs.CA
-        self._data_fields = (
+        base_fields = (
             dp.SP300_Fields.CA
-            if ecl.is_in_SP300_family(self.device.kind)
+            if is_vmp300_family
             else dp.VMP3_Fields.CA
         )
 
-        self.field_titles = [
+        self._data_fields = (
+            fields_with_ece_and_charge(base_fields)
+            if self._record_ece
+            else base_fields
+        )
+
+        field_titles = [
             "Time [s]",
             "Voltage [V]",
             "Current [A]",
@@ -430,17 +461,60 @@ class CA(BiologicProgram):
             "Cycle",
         ]
 
+        field_names = [
+            "time",
+            "voltage",
+            "current",
+            "power",
+            "cycle",
+        ]
+
+        if self._record_ece:
+            field_titles.extend(
+                [
+                    "Ece [V]",
+                    "Q-Q0 [mAh]",
+                ]
+            )
+            field_names.extend(
+                [
+                    "ece",
+                    "charge",
+                ]
+            )
+
+        self.field_titles = field_titles
+
         self._fields = namedtuple(
-            "CA_Datum", ["time", "voltage", "current", "power", "cycle"]
+            "CA_Datum",
+            field_names,
         )
 
-        self._field_values = lambda datum, segment: (
-            dp.calculate_time(datum.t_high, datum.t_low, segment.info, segment.values),
-            datum.voltage,
-            datum.current,
-            datum.voltage * datum.current,  # power
-            datum.cycle,
-        )
+        def field_values(datum, segment):
+            values = [
+                dp.calculate_time(
+                    datum.t_high,
+                    datum.t_low,
+                    segment.info,
+                    segment.values,
+                ),
+                datum.voltage,
+                datum.current,
+                datum.voltage * datum.current,
+                datum.cycle,
+            ]
+
+            if self._record_ece:
+                values.extend(
+                    [
+                        datum.ece,
+                        datum.charge,
+                    ]
+                )
+
+            return tuple(values)
+
+        self._field_values = field_values
 
     def run(self, retrieve_data=True):
         """
@@ -460,6 +534,13 @@ class CA(BiologicProgram):
                 "N_Cycles": 0,
             }
             params[ch].update(map_hardware_params(ch_params, by_channel=False))
+
+            if self._record_ece:
+                add_ece_and_charge_recording(
+                    params[ch],
+                    ch_params,
+                    base_timebase=21e-6,
+                )
 
         # run technique
         data = self._run("ca", params, retrieve_data=retrieve_data)
@@ -665,7 +746,7 @@ class CALimit(BiologicProgram):
             record_ece: Record Ece and Q-Q0 using XCTR.
                 This is only supported by VMP-300 family devices.
                 [Default: False]
-            timebase: Original CPLimit timebase before the XCTR delay.
+            timebase: Original CALimit timebase before the XCTR delay.
                 The VMP-300 default is 34 us.
                 [Default: 34e-6]
         :param **kwargs: Parameters passed to BiologicProgram.
@@ -678,6 +759,8 @@ class CALimit(BiologicProgram):
             "limits": [],
             "step_limits": None,
             "exit_condition": ecl.ExitCondition.STOP,
+            "record_ece": False,
+            "timebase": 34e-6,
         }
 
         channels = kwargs["channels"] if ("channels" in kwargs) else None
@@ -685,15 +768,38 @@ class CALimit(BiologicProgram):
 
         super().__init__(device, params, **kwargs)
 
+        self._record_ece = record_ece_enabled(
+            self.params
+        )
+
+        is_vmp300_family = ecl.is_in_SP300_family(
+            self.device.kind
+        )
+
+        if (
+            self._record_ece
+            and not is_vmp300_family
+        ):
+            raise ValueError(
+                "XCTR Ece and charge recording is only "
+                "supported on VMP-300 family devices."
+            )
+
         self._techniques = ["calimit"]
         self._parameter_types = tfs.CALIMIT
-        self._data_fields = (
+        base_fields = (
             dp.SP300_Fields.CALIMIT
-            if ecl.is_in_SP300_family(self.device.kind)
+            if is_vmp300_family
             else dp.VMP3_Fields.CALIMIT
         )
 
-        self.field_titles = [
+        self._data_fields = (
+            fields_with_ece_and_charge(base_fields)
+            if self._record_ece
+            else base_fields
+        )
+
+        field_titles = [
             "Time [s]",
             "Voltage [V]",
             "Current [A]",
@@ -701,17 +807,60 @@ class CALimit(BiologicProgram):
             "Cycle",
         ]
 
+        field_names = [
+            "time",
+            "voltage",
+            "current",
+            "power",
+            "cycle",
+        ]
+
+        if self._record_ece:
+            field_titles.extend(
+                [
+                    "Ece [V]",
+                    "Q-Q0 [mAh]",
+                ]
+            )
+            field_names.extend(
+                [
+                    "ece",
+                    "charge",
+                ]
+            )
+
+        self.field_titles = field_titles
+
         self._fields = namedtuple(
-            "CALimit_Datum", ["time", "voltage", "current", "power", "cycle"]
+            "CALimit_Datum",
+            field_names,
         )
 
-        self._field_values = lambda datum, segment: (
-            dp.calculate_time(datum.t_high, datum.t_low, segment.info, segment.values),
-            datum.voltage,
-            datum.current,
-            datum.voltage * datum.current,  # power
-            datum.cycle,
-        )
+        def field_values(datum, segment):
+            values = [
+                dp.calculate_time(
+                    datum.t_high,
+                    datum.t_low,
+                    segment.info,
+                    segment.values,
+                ),
+                datum.voltage,
+                datum.current,
+                datum.voltage * datum.current,
+                datum.cycle,
+            ]
+
+            if self._record_ece:
+                values.extend(
+                    [
+                        datum.ece,
+                        datum.charge,
+                    ]
+                )
+
+            return tuple(values)
+
+        self._field_values = field_values
 
     def run(self, retrieve_data=True):
         """
@@ -780,6 +929,13 @@ class CALimit(BiologicProgram):
                 ] = test_values
 
             params[ch].update(map_hardware_params(ch_params, by_channel=False))
+
+            if self._record_ece:
+                add_ece_and_charge_recording(
+                    params[ch],
+                    ch_params,
+                    base_timebase=34e-6,
+                )
 
         # run technique
         data = self._run("calimit", params, retrieve_data=retrieve_data)
