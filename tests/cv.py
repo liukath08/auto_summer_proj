@@ -59,10 +59,12 @@ params_cv = {
 	#(BW1-9), 1= slow, 9=fast
 	"bandwidth": ecl.Bandwidth.BW5, 
 
-    # Record counter-electrode potential
+    # Record Ece and Q-Q0 through XCTR. Q-Q0 is parsed by the
+    # program but intentionally omitted from the existing CV CSV.
     "record_ece": True,
 
-    # Original CV timebase before the 5 us XCTR delay
+    # Original CV timebase. The program adds 6 us for
+    # the two XCTR fields, producing a final 51 us timebase.
     "timebase": 45e-6,
 
     #If step is vs initial or previous

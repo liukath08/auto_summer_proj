@@ -72,6 +72,13 @@ params = {
     #Hardware bandwidth 
 	#(BW1-9), 1= slow, 9=fast
 	"bandwidth": ecl.Bandwidth.BW5, 
+
+    # Record Ece and Q-Q0 through XCTR.
+    "record_ece": True,
+
+    # Original CPLimit timebase. The program adds 6 us for
+    # the two XCTR fields, producing a final 40 us timebase.
+    "timebase": 34e-6,
            
 	#If step is vs initial or previous
     #Array of 20 boolean, defualt false
@@ -127,6 +134,67 @@ def apply_channel_configurations(
             f"connection={applied.connection}"
         )
 
+#format data and save
+def save_cp_limit_data(
+    cp_limit_program,
+    output_path,
+):
+    """Save CPLimit data in the required CSV format."""
+
+    rows = []
+
+    for channel in cp_limit_program.channels:
+        for datum in cp_limit_program.data[channel]:
+            if not hasattr(datum, "ece"):
+                raise ValueError(
+                    "CPLimit data does not contain Ece. "
+                    "Confirm record_ece=True."
+                )
+
+            if not hasattr(datum, "charge"):
+                raise ValueError(
+                    "CPLimit data does not contain Q-Q0. "
+                    "Confirm XCTR charge recording is enabled."
+                )
+
+            rows.append(
+                {
+                    "time(sec)": datum.time,
+                    "Ewe(V)": datum.voltage,
+                    "Q-Q0(mAh)": datum.charge,
+                    "I(mA)": datum.current * 1000,
+                    "cycle#": int(datum.cycle),
+                    "Ece (V)": datum.ece,
+                }
+            )
+
+    if not rows:
+        raise ValueError(
+            "No CPLimit measurements were collected."
+        )
+
+    dataframe = pd.DataFrame(
+        rows,
+        columns=[
+            "time(sec)",
+            "Ewe(V)",
+            "Q-Q0(mAh)",
+            "I(mA)",
+            "cycle#",
+            "Ece (V)",
+        ],
+    )
+
+    dataframe.to_csv(
+        output_path,
+        index=False,
+    )
+
+    print(
+        f"Saved {len(dataframe)} CPLimit measurements "
+        f"to: {output_path}"
+    )
+
 #define program
 def run_cp_limit():
     print("Creating BioLogic device object...")
@@ -150,7 +218,10 @@ def run_cp_limit():
     cp_limit.run()
 
     print(f"Saving CPLimit data to: {CSV_PATH}")
-    cp_limit.save_data(CSV_PATH)
+    save_cp_limit_data(
+        cp_limit,
+        CSV_PATH,
+    )
 
     print("CPLimit finished.")
 
@@ -158,17 +229,18 @@ def run_cp_limit():
 def plot_cp_limit():
     print("Reading saved CPLimit CSV...")
 
-    # Skip the extra first line written by easy-biologic.
-    df = pd.read_csv(CSV_PATH, skiprows=1)
+    df = pd.read_csv(CSV_PATH)
 
-    time_col = "Time [s]"
-    voltage_col = "Voltage [V]"
-    cycle_col = "Cycle"
+    time_col = "time(sec)"
+    voltage_col = "Ewe(V)"
+    cycle_col = "cycle#"
+    ece_col = "Ece (V)"
 
     required_columns = [
         time_col,
         voltage_col,
         cycle_col,
+        ece_col,
     ]
 
     missing_columns = [
@@ -201,10 +273,15 @@ def plot_cp_limit():
     number_of_cycles = len(cycle_groups)
     color_map = plt.get_cmap("turbo")
 
-    figure, axis = plt.subplots(
-        figsize=(8, 6),
+    figure, axes = plt.subplots(
+        nrows=2,
+        ncols=1,
+        figsize=(9, 9),
+        sharex=True,
         constrained_layout=True,
     )
+
+    voltage_axis, ece_axis = axes
 
     for color_index, (cycle, cycle_data) in enumerate(
         cycle_groups
@@ -219,8 +296,9 @@ def plot_cp_limit():
 
         time = cycle_data[time_col]
         voltage = cycle_data[voltage_col]
+        ece = cycle_data[ece_col]
 
-        axis.plot(
+        voltage_axis.plot(
             time,
             voltage,
             color=color,
@@ -228,12 +306,32 @@ def plot_cp_limit():
             label=f"Cycle {cycle_number}",
         )
 
-    axis.set_xlabel("Time (s)")
-    axis.set_ylabel("Voltage (V)")
-    axis.set_title("CPLimit: Voltage vs Time by Cycle")
+        ece_axis.plot(
+            time,
+            ece,
+            color=color,
+            linewidth=1.5,
+            label=f"Cycle {cycle_number}",
+        )
 
-    axis.grid(True, alpha=0.3)
-    axis.legend(title="Cycles")
+    voltage_axis.set_ylabel("Ewe (V)")
+    voltage_axis.set_title("CPLimit: Ewe vs Time by Cycle")
+
+    ece_axis.set_xlabel("Time (s)")
+    ece_axis.set_ylabel("Ece (V)")
+    ece_axis.set_title("CPLimit: Ece vs Time by Cycle")
+
+    # Display the full Ece voltage instead of Matplotlib's
+    # offset notation, such as 1e-7 + 1.
+    ece_axis.ticklabel_format(
+        axis="y",
+        style="plain",
+        useOffset=False,
+    )
+
+    for axis in axes:
+        axis.grid(True, alpha=0.3)
+        axis.legend(title="Cycles")
 
     figure.savefig(
         FIG_PATH,
@@ -252,4 +350,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

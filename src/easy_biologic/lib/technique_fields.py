@@ -18,7 +18,6 @@ class CV(Enum):
     Begin_measuring_I = float
     End_measuring_I = float
     xctr = int
-    R32 = int
 
 
 class CA(Enum):
@@ -58,7 +57,7 @@ class CALIMIT(Enum):
     Exit_Cond = int
     N_Cycles = int
     xctr = int
-    R32 = int   
+  
 
 class CPLimit(Enum):
     Current_step = float
@@ -75,8 +74,7 @@ class CPLimit(Enum):
     Test3_Value = float
     Exit_Cond = int
     N_Cycles = int
-    xctr = int
-    R32 = int   
+    xctr = int  
 
 
 # Preserve the existing all-caps technique-field naming convention for callers
