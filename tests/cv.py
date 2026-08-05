@@ -19,8 +19,8 @@ channels = [0]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CV"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080526_0947_CV_-1V-1V_100mVs-1_1C16_CETOGRND.csv"
-FIG_PATH = DATA_DIR / "080526_0947_CV_-1V-1V_100mVs-1_1C16_CETOGRND.png"
+CSV_PATH = DATA_DIR / "080526_1040_CV_-1V-1V_100mVs-1_1C16_CETOGRND.csv"
+FIG_PATH = DATA_DIR / "080526_1040_CV_-1V-1V_100mVs-1_1C16_CETOGRND.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
@@ -75,7 +75,7 @@ params_cv = {
     "start": 0.0, 
 
     #End voltage
-    "end": -1.0, 
+    "end": -1.5, 
 
     #Boundary voltage in backwards scan
     "E2": 1.0, 

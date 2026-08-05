@@ -19,8 +19,8 @@ channels = [0]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CP_LIMIT"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080426_1500_CP_-1nA_1C13_CETOGRND_.csv"
-FIG_PATH = DATA_DIR / "080426_1500_CP_-1nA_1C13_CETOGRND_.png"
+CSV_PATH = DATA_DIR / "080526_1102_CP_-1nA_1C16_CETOGRND_.csv"
+FIG_PATH = DATA_DIR / "080526_1102_CP_-1nA_1C16_CETOGRND_.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
