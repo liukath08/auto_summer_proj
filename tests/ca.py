@@ -19,8 +19,8 @@ channels = [ 0 ]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CA_LIMIT"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080526_1218_CA_1C08_CETOGRND_.csv"
-FIG_PATH = DATA_DIR / "080526_1218_CA_1C08_CETOGRND_.png"
+CSV_PATH = DATA_DIR / "080626_1338_CA_1C16_CETOGRND_.csv"
+FIG_PATH = DATA_DIR / "080626_1338_CA_1C16_CETOGRND_.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
@@ -72,7 +72,7 @@ params = {
 
 	#Hardware bandwidth 
 	#(BW1-9), 1= slow, 9=fast
-	"bandwidth": ecl.Bandwidth.BW5,
+	"bandwidth": ecl.Bandwidth.BW1,
 
     # Record Ece and Q-Q0 through XCTR.
     "record_ece": True,
@@ -87,11 +87,11 @@ params = {
 
 	 #Apply Ewe (V)
 	 #Array of up to 20 voltages, in Volts
-    'voltages':  [ 0, .5, -1, .1, 0 ], 
+    'voltages':  [ 0, 1, -1.5, 1.5, 0 ], 
 
 	#Duration of applied voltage (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 10,10,10,10,10 ], 
+    'durations': [ 5,5,5,5,5 ], 
 
 	#Maximum time interval between recordedpoints.
 	'time_interval': .5, 
@@ -114,7 +114,7 @@ params = {
 	"exit_condition": ecl.ExitCondition.STOP, 
      
 	# Cycles, starts from 0
-	'cycles': 0 
+	'cycles': 1 
 }
 
 #apply channel config

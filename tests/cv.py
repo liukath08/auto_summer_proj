@@ -19,8 +19,8 @@ channels = [0]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CV"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "0806526_1226_CV_-1V-1V_100mVs-1_1C16_CETOGRND.csv"
-FIG_PATH = DATA_DIR / "0806526_1226_CV_-1V-1V_100mVs-1_1C16_CETOGRND.png"
+CSV_PATH = DATA_DIR / "0806526_1326_CV_-1V-1V_100mVs-1_1C16_CETOGRND.csv"
+FIG_PATH = DATA_DIR / "0806526_1326_CV_-1V-1V_100mVs-1_1C16_CETOGRND.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {

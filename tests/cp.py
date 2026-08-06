@@ -19,8 +19,8 @@ channels = [0]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CP_LIMIT"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080526_1204_CP_-1nA_1C16_CETOGRND_.csv"
-FIG_PATH = DATA_DIR / "080526_1204_CP_-1nA_1C16_CETOGRND_.png"
+CSV_PATH = DATA_DIR / "080626_1319CP_-1nA_1C17_CETOGRND_.csv"
+FIG_PATH = DATA_DIR / "080626_1319CP_-1nA_1C17_CETOGRND_.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
@@ -86,11 +86,11 @@ params = {
 
     #Apply I (A)
      #Array of up to 20 currents, in Amps
-    "currents": [-0.000000001, 0.000000001],#List of currents in Amps
+    "currents": [-0.00000000005, 0.00000000005],#List of currents in Amps
     
 	#Duration of applied currents (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 30, 30],#List of durations in seconds
+    'durations': [ 45, 45],#List of durations in seconds
 
     #Maximum time interval between recordedpoints.
 	'time_interval': 1.0, 
