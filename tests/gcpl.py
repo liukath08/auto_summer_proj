@@ -37,7 +37,7 @@ DATA_DIR.mkdir(
     exist_ok=True,
 )
 
-CSV_PATH = DATA_DIR / "gcpl.csv"
+CSV_PATH = DATA_DIR / "081226_1226_GPCL_3C01_CETOGRND_.CSv"
 FIG_PATH = DATA_DIR / "gcpl.png"
 
 

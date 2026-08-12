@@ -41,7 +41,7 @@ lower_voltage_limit = ebp.configure_limit(
     ecl.LimitVariable.E,
     ecl.LimitComparison.LT,
     ecl.LimitLogic.OR,
-    -1.0,
+    -2.0,
 )
 upper_voltage_limit = ebp.configure_limit(
     ecl.LimitVariable.E,
@@ -86,11 +86,11 @@ params = {
 
     #Apply I (A)
      #Array of up to 20 currents, in Amps
-    "currents": [-0.000000001, 0.000000001],#List of currents in Amps
+    "currents": [-0.000000001],#List of currents in Amps
     
 	#Duration of applied currents (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 15, 15],#List of durations in seconds
+    'durations': [ 60],#List of durations in seconds
 
     #Maximum time interval between recordedpoints.
 	'time_interval': 1.0, 
@@ -99,9 +99,8 @@ params = {
 
     #List of LimitConfig tuples defining limits for the technique. 
     #The order of the limits in the list corresponds to the order of the steps in the technique.
-    "step_limits": [
+    "step_limits": [ 
     [lower_voltage_limit], 
-    [upper_voltage_limit], 
     ],
 
     #How to exit the technique when a limit is violated.   
