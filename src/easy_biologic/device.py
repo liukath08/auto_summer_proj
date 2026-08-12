@@ -238,7 +238,7 @@ class BiologicDevice:
         if types is not None:
             params = ecl.cast_parameters(params, types)
 
-        ecc_params = ecl.create_parameters(params, index)
+        ecc_params = ecl.create_parameters(params)
         technique = ecl.technique_file(technique, self.kind)
 
         ecl.load_technique(self.idn, ch, technique, ecc_params, first, last)
@@ -617,7 +617,7 @@ class BiologicDeviceAsync:
         if types is not None:
             params = await ecl.cast_parameters_async(params, types)
 
-        ecc_params = ecl.create_parameters(params, index)
+        ecc_params = ecl.create_parameters(params)
         technique = ecl.technique_file(technique, self.kind)
 
         await ecl.load_technique_async(self.idn, ch, technique, ecc_params, first, last)

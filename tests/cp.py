@@ -86,11 +86,11 @@ params = {
 
     #Apply I (A)
      #Array of up to 20 currents, in Amps
-    "currents": [-0.00000000005, 0.00000000005],#List of currents in Amps
+    "currents": [-0.000000001, 0.000000001],#List of currents in Amps
     
 	#Duration of applied currents (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 45, 45],#List of durations in seconds
+    'durations': [ 15, 15],#List of durations in seconds
 
     #Maximum time interval between recordedpoints.
 	'time_interval': 1.0, 

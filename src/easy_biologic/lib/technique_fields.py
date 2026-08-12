@@ -5,6 +5,7 @@ class OCV(Enum):
     Rest_time_T = float
     Record_every_dE = float
     Record_every_dT = float
+    xctr = int
 
 
 class CV(Enum):

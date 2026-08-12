@@ -325,58 +325,214 @@ def fields_with_ece_and_charge(fields):
     ]
 
 class OCV(BiologicProgram):
-    """Runs an open circuit voltage scan."""
+    """Runs an open-circuit-voltage measurement."""
 
-    def __init__(self, device, params, **kwargs):
+    def __init__(
+        self,
+        device,
+        params,
+        **kwargs,
+    ):
         """
-        :param device: BiologicDevice.
-        :param params: Program parameters.
-            Params are
-            time: Run time in seconds.
-            time_interval: Maximum time between readings. [Default: 1]
-            voltage_interval: Maximum interval between voltage readings.
-                [Default: 0.01]
-        :param **kwargs: Parameters passed to BiologicProgram.
-        """
-        defaults = {"time_interval": 1, "voltage_interval": 0.01}
-        channels = kwargs["channels"] if ("channels" in kwargs) else None
-        params = set_defaults(params, defaults, channels)
+        Parameters
+        ----------
+        time:
+            OCV duration in seconds.
 
-        super().__init__(device, params, **kwargs)
+        time_interval:
+            Maximum time between readings.
+            Default: 1 second.
+
+        voltage_interval:
+            Maximum voltage change between readings.
+            Default: 0.01 V.
+
+        record_ece:
+            Record Ece and Q-Q0 through XCTR.
+            Only supported by VMP-300-family devices.
+            Default: False.
+
+        timebase:
+            Original OCV timebase before adding the
+            XCTR measurement delay.
+            VMP-300 default: 20 microseconds.
+        """
+
+        defaults = {
+            "time_interval": 1.0,
+            "voltage_interval": 0.01,
+            "record_ece": False,
+            "timebase": 20e-6,
+        }
+
+        channels = (
+            kwargs["channels"]
+            if "channels" in kwargs
+            else None
+        )
+
+        params = set_defaults(
+            params,
+            defaults,
+            channels,
+        )
+
+        super().__init__(
+            device,
+            params,
+            **kwargs,
+        )
+
+        self._record_ece = record_ece_enabled(
+            self.params
+        )
+
+        is_vmp300_family = (
+            ecl.is_in_SP300_family(
+                self.device.kind
+            )
+        )
+
+        if (
+            self._record_ece
+            and not is_vmp300_family
+        ):
+            raise ValueError(
+                "XCTR Ece and charge recording is only "
+                "supported on VMP-300-family devices."
+            )
 
         self._techniques = ["ocv"]
         self._parameter_types = tfs.OCV
 
-        self._data_fields = (
+        base_fields = (
             dp.SP300_Fields.OCV
-            if ecl.is_in_SP300_family(self.device.kind)
+            if is_vmp300_family
             else dp.VMP3_Fields.OCV
         )
 
-        self.field_titles = ["Time [s]", "Voltage [V]"]
-        self._fields = namedtuple("OCV_Datum", ["time", "voltage"])
-        self._field_values = lambda datum, segment: (  # calculate fields
-            dp.calculate_time(  # time
-                datum.t_high, datum.t_low, segment.info, segment.values
-            ),
-            datum.voltage,
+        self._data_fields = (
+            fields_with_ece_and_charge(
+                base_fields
+            )
+            if self._record_ece
+            else base_fields
         )
 
-    def run(self, retrieve_data=True):
-        """:param retrieve_data: Automatically retrieve and disconenct form device.
-        [Default: True]
-        """
-        # map to ocv params
-        key_map = {
-            "time": "Rest_time_T",
-            "voltage_interval": "Record_every_dE",
-            "time_interval": "Record_every_dT",
-        }
-        params = map_params(key_map, self.params)
-        params.update(map_hardware_params(self.params))
+        if self._record_ece:
+            self.field_titles = [
+                "Time [s]",
+                "Voltage [V]",
+                "Q-Q0 [mAh]",
+                "Ece [V]",
+            ]
 
-        # run technique
-        self._run("ocv", params, retrieve_data=retrieve_data)
+            self._fields = namedtuple(
+                "OCV_Datum",
+                [
+                    "time",
+                    "voltage",
+                    "charge",
+                    "ece",
+                ],
+            )
+
+        else:
+            self.field_titles = [
+                "Time [s]",
+                "Voltage [V]",
+            ]
+
+            self._fields = namedtuple(
+                "OCV_Datum",
+                [
+                    "time",
+                    "voltage",
+                ],
+            )
+
+        def field_values(
+            datum,
+            segment,
+        ):
+            time = dp.calculate_time(
+                datum.t_high,
+                datum.t_low,
+                segment.info,
+                segment.values,
+            )
+
+            if self._record_ece:
+                return (
+                    time,
+                    datum.voltage,
+                    datum.charge,
+                    datum.ece,
+                )
+
+            return (
+                time,
+                datum.voltage,
+            )
+
+        self._field_values = field_values
+
+    def run(
+        self,
+        retrieve_data=True,
+    ):
+        """
+        Run the OCV technique.
+
+        Parameters
+        ----------
+        retrieve_data:
+            Retrieve data and disconnect automatically.
+            Default: True.
+        """
+
+        parameters = {}
+
+        for (
+            channel,
+            channel_params,
+        ) in self.params.items():
+
+            parameters[channel] = {
+                "Rest_time_T": (
+                    channel_params["time"]
+                ),
+                "Record_every_dE": (
+                    channel_params[
+                        "voltage_interval"
+                    ]
+                ),
+                "Record_every_dT": (
+                    channel_params[
+                        "time_interval"
+                    ]
+                ),
+            }
+
+            parameters[channel].update(
+                map_hardware_params(
+                    channel_params,
+                    by_channel=False,
+                )
+            )
+
+            if self._record_ece:
+                add_ece_and_charge_recording(
+                    parameters[channel],
+                    channel_params,
+                    base_timebase=20e-6,
+                )
+
+        return self._run(
+            "ocv",
+            parameters,
+            retrieve_data=retrieve_data,
+        )
 
 
 class CA(BiologicProgram):
