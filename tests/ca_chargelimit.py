@@ -114,7 +114,7 @@ params = {
 	"exit_condition": ecl.ExitCondition.STOP, 
      
 	# Cycles, starts from 0
-	'cycles': 1 
+	'cycles': 0 
 }
 
 #apply channel config
