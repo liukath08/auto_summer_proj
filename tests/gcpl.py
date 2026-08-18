@@ -35,8 +35,8 @@ DATA_DIR.mkdir(
     exist_ok=True,
 )
 
-CSV_PATH = DATA_DIR / "081226_1226_GPCL_3C01_CETOGRND_.CSv"
-FIG_PATH = DATA_DIR / "gcpl.png"
+CSV_PATH = DATA_DIR / "081826_1150_GPCL_3C02_CETOGRND_.csv"
+FIG_PATH = DATA_DIR / "081826_1150_GPCL_3C02_CETOGRND_.png"
 
 
 # Each row configures the hardware parameters for the corresponding CP -> CA -> OCV group
@@ -51,7 +51,24 @@ HARDWARE_PARAMETERS = [
             ecl.Bandwidth.BW5,
         ],
         "CA": [
-            ecl.IRange.u10,
+            ecl.IRange.AUTO,
+            ecl.ERange.AUTO,
+            ecl.Bandwidth.BW1,
+        ],
+        "OCV": [
+            None,
+            ecl.ERange.v5,
+            ecl.Bandwidth.BW5,
+        ],
+    },
+    {
+        "CP": [
+            ecl.IRange.n1,
+            ecl.ERange.v5,
+            ecl.Bandwidth.BW5,
+        ],
+        "CA": [
+            ecl.IRange.AUTO,
             ecl.ERange.AUTO,
             ecl.Bandwidth.BW1,
         ],
@@ -66,27 +83,26 @@ HARDWARE_PARAMETERS = [
 
 # [CP lower voltage limit (V), CA lower current limit (A)].
 LOWER_LIMITS = [
-    [-1.5, -2.0],
-    [-1.5, -2.0],
-
+    [-2.0, -2.0],
+    [-2.0, -2.0],
 ]
 
 # [CP upper voltage limit (V), CA upper current limit (A)].
 UPPER_LIMITS = [
-    [1.5, 2.0],
-    [1.5, 2.0],
+    [1.0, 2.0],
+    [1.0, 2.0],
 ]
 
 #  Each row configures one CP -> CA pair:[CP applied current (A), CA applied voltage (V)].
 SETPOINTS = [
-    [-1e-9, -1.0],
+    [-1.25e-9, -1.7],
     [1e-9, 1.0],
 ]
 
 # Each row configures the corresponding CP -> CA -> OCV group: [CP duration (s), CA duration (s), OCV duration (s)].
 DURATIONS = [
     [60.0, 30.0, 10.0],
-    [60.0, 30.0, 10.0],
+    [120.0, 30.0, 10.0],
 ]
 
 def capture_technique_parameters(program):
