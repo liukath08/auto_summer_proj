@@ -1,4 +1,4 @@
-# Sequence: CP -> CA -> OCV
+#sequence is: (CP, CA, OCV, CP, CA, OCV )
 
 import asyncio
 import copy
@@ -15,7 +15,9 @@ from easy_biologic.lib import data_parser as dp
 from easy_biologic.lib import ec_lib as ecl
 from easy_biologic.program import BiologicProgram, DataSegment
 
-import gcpl_lib
+import cp
+import ca
+import ocv
 
 
 logging.basicConfig(level=logging.INFO)
@@ -38,56 +40,6 @@ DATA_DIR.mkdir(
 CSV_PATH = DATA_DIR / "081226_1226_GPCL_3C01_CETOGRND_.CSv"
 FIG_PATH = DATA_DIR / "gcpl.png"
 
-
-# Each row configures the hardware parameters for the corresponding CP -> CA -> OCV group
-#(p100, n1, n10,n100, u1, u10, u,100, m1, m10, m100, a1, KEEP, BOOSTER, AUTO)
-#(v2_5, +-2.5V),(v5, +-5V),(v10, +-10V), (AUTO)
-#(k50: 50kHz), (k1: 1kHz), (h5: 5Hz), (OFF)
-HARDWARE_PARAMETERS = [
-    {
-        "CP": [
-            ecl.IRange.n1,
-            ecl.ERange.v5,
-            ecl.Bandwidth.BW5,
-        ],
-        "CA": [
-            ecl.IRange.u10,
-            ecl.ERange.AUTO,
-            ecl.Bandwidth.BW1,
-        ],
-        "OCV": [
-            None,
-            ecl.ERange.v5,
-            ecl.Bandwidth.BW5,
-        ],
-    },
-]
-
-
-# [CP lower voltage limit (V), CA lower current limit (A)].
-LOWER_LIMITS = [
-    [-1.5, -2.0],
-    [-1.5, -2.0],
-
-]
-
-# [CP upper voltage limit (V), CA upper current limit (A)].
-UPPER_LIMITS = [
-    [1.5, 2.0],
-    [1.5, 2.0],
-]
-
-#  Each row configures one CP -> CA pair:[CP applied current (A), CA applied voltage (V)].
-SETPOINTS = [
-    [-1e-9, -1.0],
-    [1e-9, 1.0],
-]
-
-# Each row configures the corresponding CP -> CA -> OCV group: [CP duration (s), CA duration (s), OCV duration (s)].
-DURATIONS = [
-    [60.0, 30.0, 10.0],
-    [60.0, 30.0, 10.0],
-]
 
 def capture_technique_parameters(program):
     """
@@ -122,308 +74,52 @@ def capture_technique_parameters(program):
 
     return captured
 
-
+#first array: [current, holdvoltage, rest(CP 0V), ] x2 . Second array: [current time, voltage time]
 def create_sequence(device):
     """
     Create and compile:
 
-        CP -> CA -> OCV
+        CP -> CA -> OCV -> CP -> CA -> OCV
     """
 
-    required_templates = (
-        "CP_PARAMS",
-        "CA_PARAMS",
-        "OCV_PARAMS",
-    )
-
-    missing_templates = [
-        name
-        for name in required_templates
-        if not hasattr(gcpl_lib, name)
-    ]
-
-    if missing_templates:
+    if not hasattr(ocv, "params_ocv"):
         raise RuntimeError(
-            "gcpl_lib.py is missing required parameter "
-            f"templates: {missing_templates}."
+            "tests/ocv.py must define an OCV params dictionary "
+            "before running GCPL.py."
         )
 
-    if not (
-        len(SETPOINTS)
-        == len(DURATIONS)
-        == len(LOWER_LIMITS)
-        == len(UPPER_LIMITS)
-        == len(HARDWARE_PARAMETERS)
-    ):
-        raise ValueError(
-            "SETPOINTS, DURATIONS, LOWER_LIMITS, "
-            "UPPER_LIMITS, and HARDWARE_PARAMETERS must "
-            "contain the same number of rows."
-        )
-
-    sequence_definitions = []
-
-    for pair_index, (
-        setpoints,
-        durations,
-        lower_limits,
-        upper_limits,
-        hardware_parameters,
-    ) in enumerate(
-        zip(
-            SETPOINTS,
-            DURATIONS,
-            LOWER_LIMITS,
-            UPPER_LIMITS,
-            HARDWARE_PARAMETERS,
-        ),
-        start=1,
-    ):
-        if len(setpoints) != 2:
-            raise ValueError(
-                f"Setpoint row {pair_index} must be "
-                "[CP current, CA voltage]."
-            )
-
-        if len(durations) != 3:
-            raise ValueError(
-                f"Duration row {pair_index} must be "
-                "[CP duration, CA duration, OCV duration]."
-            )
-
-        if len(lower_limits) != 2:
-            raise ValueError(
-                f"Lower-limit row {pair_index} must be "
-                "[CP voltage, CA current]."
-            )
-
-        if len(upper_limits) != 2:
-            raise ValueError(
-                f"Upper-limit row {pair_index} must be "
-                "[CP voltage, CA current]."
-            )
-
-        required_techniques = {
+    sequence_definitions = [
+        (
             "CP",
+            ebp.CPLimit,
+            cp.params,
+        ),
+        (
             "CA",
+            ebp.CALimit,
+            ca.params,
+        ),
+        (
             "OCV",
-        }
-
-        if set(hardware_parameters) != required_techniques:
-            raise ValueError(
-                f"Hardware row {pair_index} must contain "
-                "exactly CP, CA, and OCV entries."
-            )
-
-        for technique_name in required_techniques:
-            if len(
-                hardware_parameters[
-                    technique_name
-                ]
-            ) != 3:
-                raise ValueError(
-                    f"Hardware row {pair_index} "
-                    f"{technique_name} entry must be "
-                    "[I_Range, E_Range, Bandwidth]."
-                )
-
-        cp_current, ca_voltage = (
-            float(value)
-            for value in setpoints
-        )
-        cp_duration, ca_duration, ocv_duration = (
-            float(value)
-            for value in durations
-        )
-        cp_lower_voltage, ca_lower_current = (
-            float(value)
-            for value in lower_limits
-        )
-        cp_upper_voltage, ca_upper_current = (
-            float(value)
-            for value in upper_limits
-        )
-
+            ebp.OCV,
+            ocv.params_ocv,
+        ),
         (
-            cp_current_range,
-            cp_voltage_range,
-            cp_bandwidth,
-        ) = hardware_parameters["CP"]
-
+            "CP",
+            ebp.CPLimit,
+            cp.params,
+        ),
         (
-            ca_current_range,
-            ca_voltage_range,
-            ca_bandwidth,
-        ) = hardware_parameters["CA"]
-
+            "CA",
+            ebp.CALimit,
+            ca.params,
+        ),
         (
-            ocv_current_range,
-            ocv_voltage_range,
-            ocv_bandwidth,
-        ) = hardware_parameters["OCV"]
-
-        try:
-            cp_current_range = ecl.IRange(
-                cp_current_range
-            )
-            cp_voltage_range = ecl.ERange(
-                cp_voltage_range
-            )
-            cp_bandwidth = ecl.Bandwidth(
-                cp_bandwidth
-            )
-
-            ca_current_range = ecl.IRange(
-                ca_current_range
-            )
-            ca_voltage_range = ecl.ERange(
-                ca_voltage_range
-            )
-            ca_bandwidth = ecl.Bandwidth(
-                ca_bandwidth
-            )
-
-            ocv_voltage_range = ecl.ERange(
-                ocv_voltage_range
-            )
-            ocv_bandwidth = ecl.Bandwidth(
-                ocv_bandwidth
-            )
-        except (TypeError, ValueError) as error:
-            raise ValueError(
-                f"Hardware row {pair_index} contains "
-                "an invalid range or bandwidth."
-            ) from error
-
-        if ocv_current_range is not None:
-            raise ValueError(
-                f"Hardware row {pair_index} OCV I_Range "
-                "must be None."
-            )
-
-        if not all(
-            math.isfinite(value)
-            for value in (
-                cp_current,
-                ca_voltage,
-                cp_duration,
-                ca_duration,
-                ocv_duration,
-                cp_lower_voltage,
-                ca_lower_current,
-                cp_upper_voltage,
-                ca_upper_current,
-            )
-        ):
-            raise ValueError(
-                f"Pair {pair_index} contains a "
-                "non-finite value."
-            )
-
-        if any(
-            duration <= 0
-            for duration in (
-                cp_duration,
-                ca_duration,
-                ocv_duration,
-            )
-        ):
-            raise ValueError(
-                f"Pair {pair_index} durations must "
-                "all be positive."
-            )
-
-        if cp_lower_voltage >= cp_upper_voltage:
-            raise ValueError(
-                f"Pair {pair_index} CP lower voltage limit "
-                "must be less than its upper voltage limit."
-            )
-
-        if ca_lower_current >= ca_upper_current:
-            raise ValueError(
-                f"Pair {pair_index} CA lower current limit "
-                "must be less than its upper current limit."
-            )
-
-        cp_params = copy.deepcopy(
-            gcpl_lib.CP_PARAMS
-        )
-        ca_params = copy.deepcopy(
-            gcpl_lib.CA_PARAMS
-        )
-        ocv_params = copy.deepcopy(
-            gcpl_lib.OCV_PARAMS
-        )
-
-        cp_params["currents"] = [cp_current]
-        cp_params["durations"] = [cp_duration]
-        cp_params["current_range"] = cp_current_range
-        cp_params["voltage_range"] = cp_voltage_range
-        cp_params["bandwidth"] = cp_bandwidth
-
-        ca_params["voltages"] = [ca_voltage]
-        ca_params["durations"] = [ca_duration]
-        ca_params["current_range"] = ca_current_range
-        ca_params["voltage_range"] = ca_voltage_range
-        ca_params["bandwidth"] = ca_bandwidth
-
-        ocv_params["time"] = ocv_duration
-        ocv_params["voltage_range"] = ocv_voltage_range
-        ocv_params["bandwidth"] = ocv_bandwidth
-
-        cp_params["step_limits"] = [
-            [
-                ebp.configure_limit(
-                    ecl.LimitVariable.E,
-                    ecl.LimitComparison.LT,
-                    ecl.LimitLogic.OR,
-                    cp_lower_voltage,
-                ),
-                ebp.configure_limit(
-                    ecl.LimitVariable.E,
-                    ecl.LimitComparison.GT,
-                    ecl.LimitLogic.OR,
-                    cp_upper_voltage,
-                ),
-            ]
-        ]
-
-        ca_params["step_limits"] = [
-            [
-                ebp.configure_limit(
-                    ecl.LimitVariable.I,
-                    ecl.LimitComparison.LT,
-                    ecl.LimitLogic.OR,
-                    ca_lower_current,
-                ),
-                ebp.configure_limit(
-                    ecl.LimitVariable.I,
-                    ecl.LimitComparison.GT,
-                    ecl.LimitLogic.OR,
-                    ca_upper_current,
-                ),
-            ]
-        ]
-
-        sequence_definitions.extend(
-            [
-                (
-                    "CP",
-                    ebp.CPLimit,
-                    cp_params,
-                ),
-                (
-                    "CA",
-                    ebp.CALimit,
-                    ca_params,
-                ),
-                (
-                    "OCV",
-                    ebp.OCV,
-                    ocv_params,
-                ),
-            ]
-        )
+            "OCV",
+            ebp.OCV,
+            ocv.params_ocv,
+        ),
+    ]
 
     sequence = []
 
@@ -684,14 +380,10 @@ class GCPLProgram(BiologicProgram):
 
         self.load_sequence()
 
-        sequence_name = " -> ".join(
-            item["label"]
-            for item in self.sequence
-        )
-
         print(
             "Starting linked sequence: "
-            f"{sequence_name}"
+            "CP -> CA -> OCV -> "
+            "CP -> CA -> OCV"
         )
 
         self.device.start_channels(
@@ -802,90 +494,10 @@ def save_gcpl_data(rows):
 
     return dataframe
 
-def make_charge_continuous(dataframe):
-    """
-    Offset each new technique's charge values so its first valid
-    charge equals the preceding technique's last valid charge.
-
-    Work independently for each channel and leave the saved CSV data
-    unchanged by operating on a copy of the dataframe.
-    """
-
-    adjusted_dataframe = dataframe.copy()
-
-    for channel in (
-        adjusted_dataframe["channel"]
-        .drop_duplicates()
-        .tolist()
-    ):
-        previous_charge = None
-
-        channel_indexes = adjusted_dataframe.index[
-            adjusted_dataframe["channel"] == channel
-        ]
-
-        sequence_steps = (
-            adjusted_dataframe.loc[
-                channel_indexes,
-                "sequence step",
-            ]
-            .drop_duplicates()
-            .tolist()
-        )
-
-        for step in sequence_steps:
-            step_indexes = adjusted_dataframe.index[
-                (
-                    adjusted_dataframe["channel"]
-                    == channel
-                )
-                & (
-                    adjusted_dataframe["sequence step"]
-                    == step
-                )
-            ]
-
-            step_charge = pd.to_numeric(
-                adjusted_dataframe.loc[
-                    step_indexes,
-                    "Q-Q0(mAh)",
-                ],
-                errors="coerce",
-            )
-
-            valid_indexes = step_charge.dropna().index
-
-            if valid_indexes.empty:
-                continue
-
-            if previous_charge is not None:
-                charge_shift = (
-                    previous_charge
-                    - step_charge.loc[valid_indexes[0]]
-                )
-
-                adjusted_dataframe.loc[
-                    valid_indexes,
-                    "Q-Q0(mAh)",
-                ] = (
-                    step_charge.loc[valid_indexes]
-                    + charge_shift
-                )
-
-            previous_charge = adjusted_dataframe.loc[
-                valid_indexes[-1],
-                "Q-Q0(mAh)",
-            ]
-
-    return adjusted_dataframe
-
-
+#plot current in nanoamps
+#when starting new technique, shift the 0 of new technique to the last charge of the old technique
 def plot_gcpl_data(dataframe):
     """Generate a shared four-panel GCPL plot."""
-
-    plot_dataframe = make_charge_continuous(
-        dataframe
-    )
 
     figure, axes = plt.subplots(
         nrows=2,
@@ -899,7 +511,7 @@ def plot_gcpl_data(dataframe):
     charge_axis = axes[1, 0]
     ece_axis = axes[1, 1]
 
-    for step, step_data in plot_dataframe.groupby(
+    for step, step_data in dataframe.groupby(
         "sequence step",
         sort=True,
     ):
@@ -948,7 +560,7 @@ def plot_gcpl_data(dataframe):
         if not current_data.empty:
             current_axis.plot(
                 current_data["time(sec)"],
-                current_data["I(mA)"] * 1_000_000,
+                current_data["I(mA)"],
                 label=label,
             )
 
@@ -983,7 +595,7 @@ def plot_gcpl_data(dataframe):
         "Time (s)"
     )
     current_axis.set_ylabel(
-        "Current (nA)"
+        "Current (mA)"
     )
 
     charge_axis.set_title(
@@ -1060,9 +672,9 @@ def main():
             "Applying channel configuration..."
         )
 
-        gcpl_lib.apply_channel_configurations(
+        cp.apply_channel_configurations(
             device,
-            gcpl_lib.CHANNEL_CONFIGURATIONS,
+            cp.CHANNEL_CONFIGURATIONS,
         )
 
         gcpl.run()

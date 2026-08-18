@@ -108,7 +108,7 @@ params = {
     "exit_condition": ecl.ExitCondition.NEXTSTEP, 
      
     # Cycles, starts from 0
-    'cycles': 1
+    'cycles': 0
 }
 
 #apply channel configurations   
