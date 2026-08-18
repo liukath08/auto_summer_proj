@@ -19,8 +19,8 @@ channels = [ 0 ]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CA_LIMIT"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080626_1338_CA_1C16_CETOGRND_.csv"
-FIG_PATH = DATA_DIR / "080626_1338_CA_1C16_CETOGRND_.png"
+CSV_PATH = DATA_DIR / "081226_1252_CA_3C01_CETOGRND_500mV.csv"
+FIG_PATH = DATA_DIR / "081226_1338_CA_3C01_CETOGRND_500mV.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
@@ -47,7 +47,7 @@ upper_current_limit = ebp.configure_limit(
     ecl.LimitVariable.I,
     ecl.LimitComparison.GT,
     ecl.LimitLogic.OR,
-    2.0, #upper limit (A)
+    200.0, #upper limit (A)
     
 )
 
@@ -78,7 +78,7 @@ params = {
     "record_ece": True,
 
     # Stop CA when |Q - Q0| exceeds this value.
-    "charge_limit_mAh": 0.010,
+    "charge_limit_mAh": 0.000010,
 
     # Original CALimit timebase. The program adds 6 us for
     # the two XCTR fields, producing a final 40 us timebase.
@@ -90,11 +90,11 @@ params = {
 
 	 #Apply Ewe (V)
 	 #Array of up to 20 voltages, in Volts
-    'voltages':  [ 0, 1, -1.5, 1.5, 0 ], 
+    'voltages':  [ -0.5 ], 
 
 	#Duration of applied voltage (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 5,5,5,5,5 ], 
+    'durations': [ 6000 ], 
 
 	#Maximum time interval between recordedpoints.
 	'time_interval': .5, 
@@ -106,10 +106,7 @@ params = {
     #The order of the limits in the list corresponds to the order of the steps in the technique.
     "step_limits": [ 
     [upper_current_limit],
-    [upper_current_limit],
-    [lower_current_limit],
-    [upper_current_limit],
-    [lower_current_limit],
+
     ],
 
 	#How to exit the technique when a limit is violated.   
