@@ -56,7 +56,7 @@ params = {
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
     # (p100, n1, n10,n100, u1, u10, u,100, m1, m10, m100, a1, KEEP, BOOSTER, AUTO)
-	"current_range": ecl.IRange.u10, 
+	"current_range": ecl.IRange.m10, 
     
 	#Voltage range 
     #(v2_5, +-2.5V),(v5, +-5V),(v10, +-10V), (AUTO, automatic voltage range)
@@ -87,11 +87,11 @@ params = {
 
 	 #Apply Ewe (V)
 	 #Array of up to 20 voltages, in Volts
-    'voltages':  [ -1, ], 
+    'voltages':  [ 0, 1, -1.5, 1.5, 0 ], 
 
 	#Duration of applied voltage (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 30 ], 
+    'durations': [ 5,5,5,5,5 ], 
 
 	#Maximum time interval between recordedpoints.
 	'time_interval': .5, 
@@ -102,6 +102,10 @@ params = {
     #List of LimitConfig tuples defining limits for the technique. 
     #The order of the limits in the list corresponds to the order of the steps in the technique.
     "step_limits": [ 
+    [upper_current_limit],
+    [upper_current_limit],
+    [lower_current_limit],
+    [upper_current_limit],
     [lower_current_limit],
     ],
 
