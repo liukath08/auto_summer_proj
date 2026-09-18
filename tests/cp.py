@@ -19,19 +19,19 @@ channels = [0]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CP_LIMIT"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "080626_1319CP_-1nA_1C17_CETOGRND_.csv"
-FIG_PATH = DATA_DIR / "080626_1319CP_-1nA_1C17_CETOGRND_.png"
+CSV_PATH = DATA_DIR / "091826_1225CP_-1nA_1C17_CETOGRND_.csv"
+FIG_PATH = DATA_DIR / "091826_1225CP_-1nA_1C17_CETOGRND_.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
     0: {
         #Electrode Connection
         #(STND, CETOGRND, WETOGRND, HV)
-        "connection": ecl.ElectrodeConnection.CETOGRND,
+        "connection": ecl.ElectrodeConnection.STND,
 
         #Channel Mode
         #(GROUNDED, FLOATING)
-        "mode": ecl.ChannelMode.GROUNDED,
+        "mode": ecl.ChannelMode.FLOATING,
   
     },
 }
@@ -47,7 +47,7 @@ upper_voltage_limit = ebp.configure_limit(
     ecl.LimitVariable.E,
     ecl.LimitComparison.GT,
     ecl.LimitLogic.OR,
-    1.0,
+    2.0,
 )
 
 #CPLimit technique parameters
@@ -55,7 +55,7 @@ params = {
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
     # (p100, n1, n10,n100, u1, u10, u,100, m1, m10, m100, a1, KEEP, BOOSTER, AUTO)
-	"current_range": ecl.IRange.n1, 
+	"current_range": ecl.IRange.u100, 
     
 	#Voltage range 
     #(v2_5, +-2.5V),(v5, +-5V),(v10, +-10V), (AUTO, automatic voltage range)
@@ -67,11 +67,11 @@ params = {
 
 	#Average, 
 	# True = average, False = no average)
-	"average": False, 
+	"average": True, 
 
     #Hardware bandwidth 
 	#(BW1-9), 1= slow, 9=fast
-	"bandwidth": ecl.Bandwidth.BW5, 
+	"bandwidth": ecl.Bandwidth.BW8, 
 
     # Record Ece and Q-Q0 through XCTR.
     "record_ece": True,
@@ -86,21 +86,22 @@ params = {
 
     #Apply I (A)
      #Array of up to 20 currents, in Amps
-    "currents": [-0.000000001],#List of currents in Amps
+    "currents": [0.0001,-0.00005],#List of currents in Amps
     
 	#Duration of applied currents (s) 
 	#Array of up to 20 durations, in seconds
-    'durations': [ 60],#List of durations in seconds
+    'durations': [ 30,30],#List of durations in seconds
 
     #Maximum time interval between recordedpoints.
-	'time_interval': 1.0, 
+	'time_interval': .25, 
 
  	#Max current change bewteen recorded points
 
     #List of LimitConfig tuples defining limits for the technique. 
     #The order of the limits in the list corresponds to the order of the steps in the technique.
     "step_limits": [ 
-    [lower_voltage_limit], 
+    [upper_voltage_limit],
+    [lower_voltage_limit],  
     ],
 
     #How to exit the technique when a limit is violated.   

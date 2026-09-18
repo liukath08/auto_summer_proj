@@ -30,8 +30,8 @@ DATA_DIR.mkdir(
     exist_ok=True,
 )
 
-CSV_PATH = DATA_DIR / "081826_1150_GPCL_3C02_CETOGRND_.csv"
-FIG_PATH = DATA_DIR / "081826_1150_GPCL_3C02_CETOGRND_.png"
+CSV_PATH = DATA_DIR / "091826_1150_GPCL_3C02_STND_.csv"
+FIG_PATH = DATA_DIR / "091826_1150_GPCL_3C02_STND_.png"
 
 
 # Each row configures the hardware parameters for the corresponding CP -> CA -> OCV group
@@ -41,7 +41,7 @@ FIG_PATH = DATA_DIR / "081826_1150_GPCL_3C02_CETOGRND_.png"
 HARDWARE_PARAMETERS = [
     {
         "CP": [
-            ecl.IRange.n10,
+            ecl.IRange.m1,
             ecl.ERange.AUTO,
             ecl.Bandwidth.BW5,
         ],
@@ -58,7 +58,7 @@ HARDWARE_PARAMETERS = [
     },
     {
         "CP": [
-            ecl.IRange.n10,
+            ecl.IRange.m1,
             ecl.ERange.AUTO,
             ecl.Bandwidth.BW5,
         ],
@@ -78,34 +78,34 @@ HARDWARE_PARAMETERS = [
 CHANNEL_CONFIGURATIONS = {
     0: {
         "connection": (
-            ecl.ElectrodeConnection.CETOGRND
+            ecl.ElectrodeConnection.STND
         ),
-        "mode": ecl.ChannelMode.GROUNDED,
+        "mode": ecl.ChannelMode.FLOATING,
     },
 }
 
 #  Each row configures one CP -> CA pair:[CP applied current (A), CA applied voltage (V)].
 SETPOINTS = [
-    [-1.25e-9, -1.7],
-    [1e-9, 1.0],
+    [1e-4, 1.0],
+    [-1e-4, -1.0],
 ]
 
 # [CP lower voltage limit (V), CA lower current limit (A)].
 LOWER_LIMITS = [
-    [-2.0, -2.0],
-    [-2.0, -2.0],
+    [-10.0, -5.0],
+    [-10.0, -5.0],
 ]
 
 # [CP upper voltage limit (V), CA upper current limit (A)].
 UPPER_LIMITS = [
-    [1.0, 2.0],
-    [1.0, 2.0],
+    [10.0, 2.0],
+    [10.0, 2.0],
 ]
 
 # Each row configures the corresponding CP -> CA -> OCV group: [CP duration (s), CA duration (s), OCV duration (s)].
 DURATIONS = [
-    [60.0, 30.0, 10.0],
-    [120.0, 30.0, 10.0],
+    [30.0, 30.0, 10.0],
+    [30.0, 30.0, 10.0],
 ]
 
 
