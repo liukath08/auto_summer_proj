@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 import easy_biologic as ebl
-import easy_biologic.base_programs_old as ebp
+import easy_biologic.base_programs as ebp
 from easy_biologic.lib import ec_lib as ecl
 
 from pathlib import Path
@@ -19,8 +19,8 @@ channels = [0]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CP_LIMIT"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "091826_1225CP_-1nA_1C17_CETOGRND_.csv"
-FIG_PATH = DATA_DIR / "091826_1225CP_-1nA_1C17_CETOGRND_.png"
+CSV_PATH = DATA_DIR / "091826_1242CP_-1nA_1C17_CETOGRND_.csv"
+FIG_PATH = DATA_DIR / "091826_1242CP_-1nA_1C17_CETOGRND_.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
@@ -55,7 +55,7 @@ params = {
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
     # (p100, n1, n10,n100, u1, u10, u,100, m1, m10, m100, a1, KEEP, BOOSTER, AUTO)
-	"current_range": ecl.IRange.u100, 
+	"current_range": ecl.IRange.n100, 
     
 	#Voltage range 
     #(v2_5, +-2.5V),(v5, +-5V),(v10, +-10V), (AUTO, automatic voltage range)
@@ -86,7 +86,7 @@ params = {
 
     #Apply I (A)
      #Array of up to 20 currents, in Amps
-    "currents": [0.0001,-0.00005],#List of currents in Amps
+    "currents": [0.0000001,-0.0000001],#List of currents in Amps
     
 	#Duration of applied currents (s) 
 	#Array of up to 20 durations, in seconds

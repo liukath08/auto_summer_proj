@@ -19,19 +19,19 @@ channels = [0]
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "CV"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_PATH = DATA_DIR / "0806526_1326_CV_-1V-1V_100mVs-1_1C16_CETOGRND.csv"
-FIG_PATH = DATA_DIR / "0806526_1326_CV_-1V-1V_100mVs-1_1C16_CETOGRND.png"
+CSV_PATH = DATA_DIR / "0918526_1326_CV_-1V-1V_100mVs-1_1C16_CETOGRND.csv"
+FIG_PATH = DATA_DIR / "0918526_1326_CV_-1V-1V_100mVs-1_1C16_CETOGRND.png"
 
 #channel configurations
 CHANNEL_CONFIGURATIONS = {
     0: {
         #Electrode Connection
         #(STND, CETOGRND, WETOGRND, HV)
-        "connection": ecl.ElectrodeConnection.CETOGRND,
+        "connection": ecl.ElectrodeConnection.STND,
 
         #Channel Mode
         #(GROUNDED, FLOATING)
-        "mode": ecl.ChannelMode.GROUNDED,
+        "mode": ecl.ChannelMode.FLOATING,
   
     },
 }
@@ -41,7 +41,7 @@ params_cv = {
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
     # (p100, n1, n10,n100, u1, u10, u,100, m1, m10, m100, a1, KEEP, BOOSTER, AUTO)
-	"current_range": ecl.IRange.AUTO, 
+	"current_range": ecl.IRange.u1, 
     
 	#Ewe range 
     #(v2_5, +-2.5V),(v5, +-5V),(v10, +-10V), (AUTO, automatic voltage range)
@@ -57,7 +57,7 @@ params_cv = {
 
 	#Hardware bandwidth 
 	#(BW1-9), 1= slow, 9=fast
-	"bandwidth": ecl.Bandwidth.BW5, 
+	"bandwidth": ecl.Bandwidth.BW8, 
 
     # Record Ece and Q-Q0 through XCTR. Q-Q0 is parsed by the
     # program but intentionally omitted from the existing CV CSV.
