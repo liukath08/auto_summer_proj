@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 import easy_biologic as ebl
-import easy_biologic.base_programs as ebp
+import easy_biologic.base_programs_old as ebp
 from easy_biologic.lib import ec_lib as ecl
 
 from pathlib import Path
