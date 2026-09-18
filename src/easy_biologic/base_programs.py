@@ -188,24 +188,32 @@ def map_params(
         :param ch_params: Parameter dictionary.
         :returns: Modified parameter dictionary.
         """
-        for o_key, n_key in key_map.items():
-            ch_params[n_key] = ch_params[o_key]
-            if isinstance(ch_params[n_key], Enum) and convert_enums:
-                ch_params[n_key] = ch_params[n_key].value
+        mapped = {n_key: ch_params[o_key] for o_key, n_key in key_map.items()}
+        if convert_enums:
+            mapped = {
+                key: value.value if isinstance(value, Enum) else value
+                for key, value in mapped.items()
+            }
 
         if not keep:
             # remove original keys
             for o_key in key_map:
                 del ch_params[o_key]
 
+        ch_params.update(mapped)
+
         if discard_unmapped:
             # Remove any unmapped keys
             for key in list(ch_params.keys()):
-                if key not in key_map.values():
+                if key not in key_map.values() and not (keep and key in key_map):
                     del ch_params[key]
 
     if not inplace:
-        params = params.copy()
+        params = (
+            {ch: ch_params.copy() for ch, ch_params in params.items()}
+            if by_channel
+            else params.copy()
+        )
 
     if by_channel:
         for ch, ch_params in params.items():
@@ -229,6 +237,21 @@ def map_hardware_params(params, by_channel=True, keep=False, inplace=False):
         [Default: False]
     :returns: Dictionary with mapped keys.
     """
+    if by_channel:
+        mapped = {
+            ch: map_hardware_params(
+                ch_params,
+                by_channel=False,
+                keep=keep,
+                inplace=inplace,
+            )
+            for ch, ch_params in params.items()
+        }
+        if inplace:
+            params.update(mapped)
+            return params
+        return mapped
+
     hardware_param_map = {
         "voltage_range": "E_Range",
         "current_range": "I_Range",
@@ -242,6 +265,9 @@ def map_hardware_params(params, by_channel=True, keep=False, inplace=False):
     }
 
     if len(hardware_param_map) == 0:
+        if inplace:
+            params.clear()
+            return params
         return {}
 
     # Return only the mapped params
@@ -268,6 +294,9 @@ def configure_ece_and_charge(
         bool(channel_params.get("record_ece", False))
         for channel_params in params.values()
     }
+
+    if len(settings) > 1:
+        raise ValueError("record_ece must be identical across channels.")
 
     enabled = settings.pop() if settings else False
     configured_fields = fields
@@ -349,7 +378,12 @@ def set_current_range(ch_params, i_max):
             user_i_range = ecl.IRange(user_i_range)
 
         # Warn, but don't overwrite
-        if user_i_range.value <= i_max:
+        # Fixed range codes 0..10 represent 10**(code - 10) amperes.
+        # KEEP, BOOSTER, and AUTO do not specify a fixed capacity.
+        if (
+            ecl.IRange.p100.value <= user_i_range.value <= ecl.IRange.a1.value
+            and abs(i_max) > 10.0 ** (user_i_range.value - ecl.IRange.a1.value)
+        ):
             warnings.warn(
                 "Expected maximum current of {:.1e} A exceeds "
                 "provided current range {}".format(i_max, user_i_range)
@@ -408,33 +442,13 @@ def configure_limit(
         Has units of volts for voltage limit or amps for current limit.
     :returns: LimitConfig tuple
     """
-    limit_var = variable.value
-    limit_active = 1
-    limit_comparison = comparison.value
-    limit_operator = logic.value
-
-    # Construct 32-bit integer from limit configuration parameters
-    bit_list = [limit_active, limit_operator, limit_comparison, limit_var]
-    bit_list = [bin(bit)[2:] for bit in bit_list]
-
-    # From documentation:
-    # Bit 0: Limit Active
-    # Bit 1: Limit Logic
-    # Bits 2-4: Limit Comparison
-    # Bits 5-32: Limit Variable
-    bit_positions = [0, 1, 2, 5]
-    bit_string = ["0" for _ in range(32)]
-
-    for pos, bits in zip(bit_positions, bit_list):
-        for i, bit in enumerate(bits):
-            bit_string[pos + i] = bit
-
-    bit_string = "".join(bit_string)
-    # Reverse order for correct evaluation
-    bit_string = bit_string[::-1]
-
-    # Evaluate bit string
-    config_int = int(bit_string, base=2)
+    # Bit 0: Active; bit 1: Logic; bits 2..4: Sign; bits 5..31: Variable.
+    config_int = (
+        1
+        | (logic.value << 1)
+        | (comparison.value << 2)
+        | (variable.value << 5)
+    )
 
     return LimitConfig(config_int, limit_value)
 
@@ -526,7 +540,7 @@ class OCV(BiologicProgram):
             self.field_titles = [
                 "Time [s]",
                 "Voltage [V]",
-                "Q-Q0 [mAh]",
+                "Q-Q0 [A*s]",
                 "Ece [V]",
             ]
 
@@ -776,7 +790,7 @@ class CALimit(BiologicProgram):
             field_titles.extend(
                 [
                     "Ece [V]",
-                    "Q-Q0 [mAh]",
+                    "Q-Q0 [A*s]",
                 ]
             )
             field_names.extend(
@@ -1003,7 +1017,7 @@ class CALimit(BiologicProgram):
             or single voltage to apply to all channels.
         :param durations: Dictionary of durations list keyed by channel,
             or single duration to apply to all channels.
-        :param vs_initial: Dictionary of vs. initials list keyed by channel,
+        :param vs_initial: Dictionary of vs. initial booleans keyed by channel,
             or single vs. initial boolean to apply to all channels.
         """
         # format params
@@ -1011,7 +1025,7 @@ class CALimit(BiologicProgram):
             # transform to dictionary if needed
             voltages = {ch: voltages for ch in self.channels}
 
-        if (durations is not None) and (not isinstance(voltages, dict)):
+        if (durations is not None) and (not isinstance(durations, dict)):
             # transform to dictionary if needed
             durations = {ch: durations for ch in self.channels}
 
@@ -1028,15 +1042,24 @@ class CALimit(BiologicProgram):
             steps = len(ch_voltages)
             params = {"Voltage_step": ch_voltages, "Step_number": steps - 1}
 
-            if (durations is not None) and (durations[ch]):
-                params["Duration_step"] = durations[ch]
+            if durations is not None:
+                params["Duration_step"] = (
+                    durations[ch]
+                    if isinstance(durations[ch], list)
+                    else [durations[ch]] * steps
+                )
 
-            if (vs_initial is not None) and (vs_initial[ch]):
-                params["vs_initial"] = vs_initial[ch]
+            if vs_initial is not None:
+                params["vs_initial"] = [vs_initial[ch]] * steps
 
             self.device.update_parameters(
                 ch, "calimit", params, types=self._parameter_types
             )
+            self.params[ch]["voltages"] = ch_voltages.copy()
+            if durations is not None:
+                self.params[ch]["durations"] = params["Duration_step"].copy()
+            if vs_initial is not None:
+                self.params[ch]["vs_initial"] = vs_initial[ch]
 
 class CPLimit(BiologicProgram):
     """Runs a chrono-potentiometry technique with limit conditions."""
@@ -1134,7 +1157,7 @@ class CPLimit(BiologicProgram):
             field_titles.extend(
                 [
                     "Ece [V]",
-                    "Q-Q0 [mAh]",
+                    "Q-Q0 [A*s]",
                 ]
             )
             field_names.extend(
@@ -1205,21 +1228,6 @@ class CPLimit(BiologicProgram):
                     for _ in range(steps)
                 ]
 
-            if len(step_limits) != steps:
-                raise ValueError(
-                    "step_limits must contain one list "
-                    "for every current step."
-                )
-
-            if any(
-                len(limits) > 3
-                for limits in step_limits
-            ):
-                raise ValueError(
-                    "CPLimit supports at most three "
-                    "limits per step."
-                )
-
             for test_index in range(3):
                 test_configs = []
                 test_values = []
@@ -1282,15 +1290,24 @@ class CPLimit(BiologicProgram):
                 "Step_number": len(ch_currents) - 1,
             }
 
-            if (durations is not None) and durations[ch]:
-                params["Duration_step"] = durations[ch]
+            if durations is not None:
+                params["Duration_step"] = (
+                    durations[ch]
+                    if isinstance(durations[ch], list)
+                    else [durations[ch]] * len(ch_currents)
+                )
 
-            if (vs_initial is not None) and vs_initial[ch]:
-                params["vs_initial"] = vs_initial[ch]
+            if vs_initial is not None:
+                params["vs_initial"] = [vs_initial[ch]] * len(ch_currents)
 
             self.device.update_parameters(
                 ch, "cplimit", params, types=self._parameter_types
             )
+            self.params[ch]["currents"] = ch_currents.copy()
+            if durations is not None:
+                self.params[ch]["durations"] = params["Duration_step"].copy()
+            if vs_initial is not None:
+                self.params[ch]["vs_initial"] = vs_initial[ch]
 
 class CV(BiologicProgram):
     """Runs a CV scan."""
@@ -1381,7 +1398,7 @@ class CV(BiologicProgram):
                 "Time [s]",
                 "Power [W]",
                 "Cycle",
-                "Q-Q0 [mAh]",
+                "Q-Q0 [A*s]",
             ]
 
             self._fields = namedtuple(
@@ -1499,7 +1516,11 @@ class CV(BiologicProgram):
         data = self._run("cv", params, retrieve_data=retrieve_data)
 
 class GCPL(BiologicProgram):
-    """Run and decode multiple BioLogic techniques as one sequence."""
+    """Run and decode multiple BioLogic techniques as one sequence.
+
+    Host charge limits are not supported. Data contains technique-specific
+    points; use rows for the standardized mAh/mA export.
+    """
 
     def __init__(self, device, sequence, channels):
         super().__init__(
@@ -1590,10 +1611,13 @@ class GCPL(BiologicProgram):
                 }
             )
 
+        self._data[channel].extend(processed_points)
+        for callback in self._cb_data:
+            callback(segment, self)
+
         return DataSegment(processed_points, raw.info, raw.values)
 
     def run(self, read_interval=0.5):
         self.load_sequence()
         self.device.start_channels(self.channels)
         asyncio.run(self._retrieve_data(read_interval))
-

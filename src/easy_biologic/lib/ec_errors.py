@@ -87,6 +87,8 @@ class EcError(Exception):
         :param message: The error message.
         :returns: EcError
         """
+        self.value = value
+
         if value is not None:
             try:
                 (code, message) = EcError.errors[value]

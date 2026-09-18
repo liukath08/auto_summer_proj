@@ -1,5 +1,4 @@
 
-import logging
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -7,9 +6,6 @@ import easy_biologic as ebl
 import easy_biologic.base_programs as ebp
 from easy_biologic.lib import ec_lib as ecl
 from pathlib import Path
-
-Path("data").mkdir(parents=True, exist_ok=True)
-logging.basicConfig( level = logging.DEBUG )
 
 BIOLOGIC_ADDRESS = "USB0"
 
@@ -36,23 +32,22 @@ CHANNEL_CONFIGURATIONS = {
     },
 }
 
-#Configure Limits
-lower_current_limit = ebp.configure_limit(
-    ecl.LimitVariable.I,
-    ecl.LimitComparison.LT,
-    ecl.LimitLogic.OR,
-    -2.0, #lower current limit (A)
-)
 upper_current_limit = ebp.configure_limit(
     ecl.LimitVariable.I,
     ecl.LimitComparison.GT,
     ecl.LimitLogic.OR,
-    200.0, #upper limit (A)
-    
+    200.0, #upper limit (A)  
+)
+
+lower_current_limit = ebp.configure_limit(
+    ecl.LimitVariable.I,
+    ecl.LimitComparison.GT,
+    ecl.LimitLogic.OR,
+    -200.0, #upper limit (A)  
 )
 
 #CAlimit technique parameters
-params = { 
+params_ca = { 
     #Current range  
 	# units in Amps, with p, n, u ,n, a for pico, nano, micro, milli, and Amps
     # (p100, n1, n10,n100, u1, u10, u,100, m1, m10, m100, a1, KEEP, BOOSTER, AUTO)
@@ -122,21 +117,13 @@ def apply_channel_configurations(
     device,
     configurations,
 ):
-    """Apply and verify each channel's hardware configuration."""
+    """Apply each channel's hardware configuration."""
 
     for ch, configuration in configurations.items():
         device.set_channel_configuration(
             ch,
             mode=configuration["mode"],
             connection=configuration["connection"],
-        )
-
-        applied = device.channel_configuration(ch)
-
-        print(
-            f"Channel {ch}: "
-            f"mode={applied.mode}, "
-            f"connection={applied.connection}"
         )
 
 #format data and save
@@ -166,7 +153,7 @@ def save_ca_data(
                 {
                     "time(sec)": datum.time,
                     "Ewe(V)": datum.voltage,
-                    "Q-Q0(mAh)": datum.charge*.2777777777777778,
+                    "Q-Q0(mAh)": datum.charge / 3.6,
                     "I(mA)": datum.current * 1000,
                     "cycle#": int(datum.cycle),
                     "Ece (V)": datum.ece,
@@ -195,45 +182,34 @@ def save_ca_data(
         index=False,
     )
 
-    print(
-        f"Saved {len(dataframe)} CA measurements "
-        f"to: {output_path}"
-    )
-
 #define program
 def run_ca_limit():
-    print("Creating BioLogic device object...")
-    bl = ebl.BiologicDevice(BIOLOGIC_ADDRESS)
-
-    print("Creating CALimit program...")
-    ca_limit = ebp.CALimit(
-        bl,
-        params,
-        channels=channels,
-    )
-
-    print("Applying Channel Config...")
+    bl = ebl.BiologicDevice(BIOLOGIC_ADDRESS, populate_info=False)
     bl.connect()
-    apply_channel_configurations(
-    bl,
-    CHANNEL_CONFIGURATIONS, 
-    )
 
-    print("Running CALimit...")
-    ca_limit.run()
+    try:
+        apply_channel_configurations(
+            bl,
+            CHANNEL_CONFIGURATIONS,
+        )
+        ca_limit = ebp.CALimit(
+            bl,
+            params_ca,
+            channels=channels,
+            autoconnect=False,
+        )
+        ca_limit.run()
+    finally:
+        if bl.is_connected():
+            bl.disconnect()
 
-    print(f"Saving CALimit data to: {CSV_PATH}")
     save_ca_data(
         ca_limit,
         CSV_PATH,
     )
 
-    print("CALimit finished.")
-
 #plot data
 def plot_ca_limit():
-    print("Reading saved CALimit CSV...")
-
     df = pd.read_csv(CSV_PATH)
 
     time_col = "time(sec)"
@@ -334,14 +310,10 @@ def plot_ca_limit():
     )
     plt.close(figure)
 
-    print(f"Saved graph to: {FIG_PATH}")
-
 #run program
 def main():
     run_ca_limit()
     plot_ca_limit()
-    print("Done.")
 
 if __name__ == "__main__":
     main()
-

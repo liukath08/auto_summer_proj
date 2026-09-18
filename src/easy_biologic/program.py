@@ -5,33 +5,32 @@ import asyncio
 import threading
 from abc import ABC
 from collections import namedtuple
+from typing import Any
+import pandas as pd
+
 
 from .lib import ec_lib as ecl
 from .lib import data_parser as dp
 
 # Try to import pandas for faster file writing
-try:
-    import pandas as pd
-except ImportError:
-    _pandas_installed = False
+pd_csv_kwargs: dict[str, Any] = {}
+
+
+# Set kwargs for file writing
+pd_csv_kwargs = {
+    "header": False,
+    "index": False,
+}
+
+# Check version and set line terminator arg name accordingly
+pd_version_tuple = [int(v) for v in pd.__version__.split(".")]
+if (pd_version_tuple[0] > 1) or (
+    pd_version_tuple[0] == 1 and pd_version_tuple[1] >= 5
+):
+    # Argument name changed in version 1.5
+    pd_csv_kwargs["lineterminator"] = "\n"
 else:
-    _pandas_installed = True
-
-    # Set kwargs for file writing
-    pd_csv_kwargs = {
-        "header": False,
-        "index": False,
-    }
-
-    # Check version and set line terminator arg name accordingly
-    pd_version_tuple = [int(v) for v in pd.__version__.split(".")]
-    if (pd_version_tuple[0] > 1) or (
-        pd_version_tuple[0] == 1 and pd_version_tuple[1] >= 5
-    ):
-        # Argument name changed in version 1.5
-        pd_csv_kwargs["lineterminator"] = "\n"
-    else:
-        pd_csv_kwargs["line_terminator"] = "\n"
+    pd_csv_kwargs["line_terminator"] = "\n"
 
 
 DataSegment = namedtuple(
@@ -241,7 +240,7 @@ class BiologicProgram(ABC):
 
         if single_ch:
             # single channel provided
-            return states[ch]
+            return states[channels[0]]
 
         return states
 
@@ -372,7 +371,7 @@ class BiologicProgram(ABC):
         if self.device.is_connected():
             self.device.disconnect()
 
-    def _run(self, technique, params, read_interval=1, retrieve_data=True):
+    def _run(self, technique, params, read_interval: float = 1.0, retrieve_data=True):
         """Runs the program.
 
         :param technqiue: Name of technique.
@@ -447,7 +446,7 @@ class BiologicProgram(ABC):
 
         return segments
 
-    async def _retrieve_data(self, interval=1):
+    async def _retrieve_data(self, interval: float = 1.0):
         """Retrieves data from the device until it is stopped.
         Data is parsed.
 
@@ -461,7 +460,7 @@ class BiologicProgram(ABC):
             if (  # stop signal received
                 self._stop_event is not None and self._stop_event.is_set()
             ):
-                logging.warning(f"Halting program on channel {self.channel}.")
+                logging.warning(f"Halting program on channels {self.channels}.")
 
                 break
 
@@ -491,7 +490,7 @@ class BiologicProgram(ABC):
         :param open_file: File object opened for writing
         :raises ImportError: if pandas not installed
         """
-        if not _pandas_installed:
+        if pd is None:
             raise ImportError("pandas is required for _write_data_together_pandas")
 
         # Get dataframe for each channel
@@ -605,7 +604,7 @@ class BiologicProgram(ABC):
 
         except Exception as err:
             if self._threaded:
-                logging.warning(f"[#save_data] CH{ch}: {err}")
+                logging.warning(f"[#save_data] {err}")
             else:
                 raise err
 
@@ -626,7 +625,7 @@ class BiologicProgram(ABC):
         for ch, ch_data in self._unsaved_data.items():
             file = os.path.join(folder, f"ch-{ch}.csv")
 
-            if _pandas_installed:
+            if pd is not None:
                 dataframe = pd.DataFrame(ch_data, columns=self.field_titles)
                 csv_data = dataframe.to_csv(**pd_csv_kwargs)
             else:

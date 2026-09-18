@@ -48,7 +48,6 @@ upper_current_limit = ebp.configure_limit(
     ecl.LimitComparison.GT,
     ecl.LimitLogic.OR,
     2.0, #upper limit (A)
-    
 )
 
 #CAlimit technique parameters

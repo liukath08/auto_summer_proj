@@ -151,9 +151,9 @@ class BiologicDevice:
             ecl.init_channels(self.idn, chs, bin_file=bin_file, xlx_file=xlx_file)
 
         except EcError as err:
-            if err.value == -9:
-                # ECLab firmware loaded
-                pass
+            # Allow already-loaded EC-Lab firmware; propagate other failures.
+            if err.value != -9:
+                raise
 
         self.__techniques = [list() for ch in self.plugged]
 
@@ -528,9 +528,9 @@ class BiologicDeviceAsync:
                 self.idn, chs, bin_file=bin_file, xlx_file=xlx_file
             )
         except EcError as err:
-            if err.value == -9:
-                # ECLab firmware loaded
-                pass
+            # Allow already-loaded EC-Lab firmware; propagate other failures.
+            if err.value != -9:
+                raise
 
         self.__techniques = [list() for ch in self.plugged]
 

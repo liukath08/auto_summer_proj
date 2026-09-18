@@ -442,6 +442,9 @@ class DataInfo(c.Structure):
     `MuxPad`: Depricated
     """
 
+    # EC-Lab structures use double-word (four-byte) alignment.
+    _pack_ = 4
+
     _fields_ = [
         ("IRQskipped", c.c_int32),
         ("NbRows", c.c_int32),
@@ -660,7 +663,7 @@ def create_parameter(name, value, index=0, kind=None):
     name = name.encode("utf-8")
     index = c.c_int32(index)
     param = EccParam()
-    create(name, value, index, c.byref(param))
+    validate(create(name, value, index, c.byref(param)))
     return param
 
 
@@ -864,6 +867,9 @@ def init_channels(idn, chs, force_reload=False, bin_file=None, xlx_file=None):
         xlx_file,
     )
 
+    # Check every selected channel before allowing already-loaded firmware.
+    if err in (0, -9):
+        _validate_channel_results(chs, results, ignored=(-9,))
     validate(err)
 
     return results
@@ -1082,6 +1088,7 @@ def start_channels(idn, chs):
     err = BL_StartChannels(idn, c.byref(active), c.byref(results), num_chs)
 
     validate(err)
+    _validate_channel_results(chs, results)
 
 
 def stop_channel(idn, ch):
@@ -1118,6 +1125,7 @@ def stop_channels(idn, chs):
     err = BL_StopChannels(idn, c.byref(active), c.byref(results), num_chs)
 
     validate(err)
+    _validate_channel_results(chs, results)
 
 
 def get_values(idn, ch):
@@ -1268,7 +1276,10 @@ async def init_channels_async(
         xlx_file,
     )
 
+    if err in (0, -9):
+        _validate_channel_results(chs, results, ignored=(-9,))
     validate(err)
+    return results
 
 
 async def is_channel_connected_async(idn, ch):
@@ -1481,9 +1492,10 @@ async def start_channels_async(idn, chs):
     logging.debug(
         "[easy-biologic] Starting channels {} on device {}.".format(chs, idn.value)
     )
-    err = await BL_StartChannel_async(idn, c.byref(active), c.byref(results), num_chs)
+    err = await BL_StartChannels_async(idn, c.byref(active), c.byref(results), num_chs)
 
     validate(err)
+    _validate_channel_results(chs, results)
 
 
 async def stop_channel_async(idn, ch):
@@ -1517,9 +1529,10 @@ async def stop_channels_async(idn, chs):
     logging.debug(
         "[easy-biologic] Stopping channels {} on device {}.".format(chs, idn.value)
     )
-    err = await BL_StopChannel_async(idn, c.byref(active), c.byref(results), num_chs)
+    err = await BL_StopChannels_async(idn, c.byref(active), c.byref(results), num_chs)
 
     validate(err)
+    _validate_channel_results(chs, results)
 
 
 async def get_values_async(idn, ch):
@@ -1585,6 +1598,19 @@ def validate(err):
         return True
     else:
         raise EcError(err)
+
+
+def _validate_channel_results(chs, results, ignored=()):
+    """Validate selected channels; inactive result slots are irrelevant."""
+    for channel in chs:
+        if results[channel] in ignored:
+            continue
+        try:
+            validate(results[channel])
+        except EcError as err:
+            err.channel = channel
+            err.args = (f"Channel {channel}: {err}",)
+            raise
 
 
 def create_active_array(active, size=None, kind=c.c_uint8):
